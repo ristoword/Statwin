@@ -64,7 +64,7 @@ async function load(competitionId?: string) {
     };
   } catch {
     return {
-      overview: { note: 'API non raggiungibile o database non ancora avviato.' },
+      overview: { note: 'API non raggiungibile o database non ancora avviato.', counts: { competitions: 0, teams: 0, matches: 0 } },
       competitions: [],
       selectedId: undefined,
       matches: [],
