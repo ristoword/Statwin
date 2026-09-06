@@ -113,7 +113,7 @@ CORE COMUNE + SPORT MODULES + DATA PROVIDERS
 
 Il motore statistico è sport-agnostico. Il modello predittivo è sostituibile via DI. OpenAI è un adapter, mai chiamato dai controller.
 
-Provider calcio attuale: **OpenLigaDB** (Bundesliga, dati reali). Sync:
+Provider calcio: **TheSportsDB** (Serie A, Serie B, Serie C Girone C) + **OpenLigaDB** (Bundesliga). Sync:
 
 ```bash
 curl -X POST http://localhost:3001/api/v1/football/sync

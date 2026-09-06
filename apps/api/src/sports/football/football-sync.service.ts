@@ -32,10 +32,16 @@ export class FootballSyncService {
     let standings = 0;
 
     for (const competition of competitions) {
-      const persisted = await this.upsertCompetition(sport.id, competition);
-      teams += await this.upsertTeams(sport.id, competition);
-      matches += await this.upsertMatches(sport.id, persisted.competitionId, persisted.seasonId, competition);
-      standings += await this.upsertStandings(persisted.seasonId, competition);
+      try {
+        const persisted = await this.upsertCompetition(sport.id, competition);
+        teams += await this.upsertTeams(sport.id, competition);
+        matches += await this.upsertMatches(sport.id, persisted.competitionId, persisted.seasonId, competition);
+        standings += await this.upsertStandings(persisted.seasonId, competition);
+      } catch (error) {
+        this.logger.error(
+          `Skip ${competition.name}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
 
     this.logger.log(
@@ -44,7 +50,7 @@ export class FootballSyncService {
 
     return {
       provider: this.provider.slug,
-      source: 'OpenLigaDB',
+      source: this.provider.slug,
       note: 'Solo dati restituiti dal provider. Nessun risultato inventato.',
       imported: {
         competitions: competitions.length,

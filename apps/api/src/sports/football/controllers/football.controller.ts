@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { FootballService } from '../football.service';
@@ -24,8 +24,8 @@ export class FootballController {
   }
 
   @Get('matches')
-  matches() {
-    return this.football.matches();
+  matches(@Query('competitionId') competitionId?: string) {
+    return this.football.matches(competitionId);
   }
 
   @Get('matches/:id')
@@ -44,7 +44,7 @@ export class FootballController {
   }
 
   @Get('standings')
-  standings() {
-    return this.football.standings();
+  standings(@Query('competitionId') competitionId?: string) {
+    return this.football.standings(competitionId);
   }
 }

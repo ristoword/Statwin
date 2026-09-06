@@ -19,18 +19,22 @@ export class FootballService {
     };
   }
 
-  async matches() {
+  async matches(competitionId?: string) {
     const include = { homeTeam: true, awayTeam: true, competition: true } as const;
     const now = new Date();
+    const where = {
+      sport: { slug: 'football' },
+      ...(competitionId ? { competitionId } : {}),
+    };
     const [upcoming, recent] = await Promise.all([
       this.prisma.match.findMany({
-        where: { sport: { slug: 'football' }, kickoff: { gte: now } },
+        where: { ...where, kickoff: { gte: now } },
         include,
         orderBy: { kickoff: 'asc' },
         take: 20,
       }),
       this.prisma.match.findMany({
-        where: { sport: { slug: 'football' }, kickoff: { lt: now } },
+        where: { ...where, kickoff: { lt: now } },
         include,
         orderBy: { kickoff: 'desc' },
         take: 20,
@@ -70,10 +74,18 @@ export class FootballService {
     });
   }
 
-  standings() {
+  standings(competitionId?: string) {
     return this.prisma.standing.findMany({
-      where: { season: { isCurrent: true, competition: { sport: { slug: 'football' } } } },
-      include: { team: true, season: true },
+      where: {
+        season: {
+          isCurrent: true,
+          competition: {
+            sport: { slug: 'football' },
+            ...(competitionId ? { id: competitionId } : {}),
+          },
+        },
+      },
+      include: { team: true, season: { include: { competition: true } } },
       orderBy: { position: 'asc' },
     });
   }
