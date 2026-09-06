@@ -38,7 +38,10 @@ export default async function Home() {
   const live = health.status === 'ok';
 
   return (
-    <>
+    <div className="home">
+      <div className="home-bg" aria-hidden="true">
+        <Image src="/logo.png" alt="" fill priority sizes="100vw" />
+      </div>
       <section className="hero">
         <div className="hero-copy">
           <p className="kicker">Sports intelligence platform</p>
@@ -72,9 +75,6 @@ export default async function Home() {
             </span>
             <span>18+ · nessuna vincita promessa</span>
           </div>
-        </div>
-        <div className="hero-emblem">
-          <Image src="/logo.png" alt="STATWIN — intelligenza artificiale e analisi" width={280} height={280} priority />
         </div>
       </section>
 
@@ -146,6 +146,6 @@ export default async function Home() {
           </Link>
         </div>
       </section>
-    </>
+    </div>
   );
 }

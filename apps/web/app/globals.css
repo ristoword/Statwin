@@ -158,21 +158,38 @@ p { line-height: 1.7; color: #d6cec1; }
 .page-hero { margin-bottom: 28px; max-width: 760px; }
 .page-hero p { font-size: 17px; }
 
+.home { position: relative; }
+.home-bg {
+  position: absolute;
+  inset: -48px -8% auto auto;
+  width: min(820px, 92vw);
+  height: min(780px, 92vh);
+  z-index: 0;
+  pointer-events: none;
+}
+.home-bg img {
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.42;
+  filter: saturate(1.05) contrast(1.08);
+  mask-image: radial-gradient(circle at 55% 40%, #000 28%, transparent 74%);
+}
+.home > *:not(.home-bg) { position: relative; z-index: 1; }
+
 .hero {
   position: relative;
   overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 28px;
-  align-items: center;
   border: 1px solid var(--line);
   border-radius: 32px;
   padding: clamp(36px, 6vw, 72px);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)),
-    radial-gradient(720px 320px at 86% 12%, rgba(232, 200, 114, 0.22), transparent 58%);
+    linear-gradient(90deg, rgba(5, 6, 10, 0.72) 0%, rgba(5, 6, 10, 0.38) 62%, rgba(5, 6, 10, 0.18) 100%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
   box-shadow: var(--shadow);
   margin-bottom: 22px;
+  min-height: min(520px, 72vh);
+  display: flex;
+  align-items: center;
 }
 .hero::before {
   content: "";
@@ -183,15 +200,8 @@ p { line-height: 1.7; color: #d6cec1; }
   pointer-events: none;
 }
 .hero > * { position: relative; }
+.hero-copy { max-width: 640px; }
 .hero p { max-width: 660px; font-size: 18px; }
-.hero-emblem {
-  width: min(240px, 34vw);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(232, 200, 114, 0.28), 0 20px 60px rgba(232, 200, 114, 0.18);
-}
-.hero-emblem img { width: 100%; height: 100%; object-fit: cover; }
 .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
 .hero-meta {
   display: flex;
@@ -542,8 +552,7 @@ label input { width: auto; margin: 0; }
   .header-inner { flex-wrap: wrap; padding: 12px 0; }
 }
 @media (max-width: 860px) {
-  .hero { grid-template-columns: 1fr; }
-  .hero-emblem { margin: 0 auto; width: min(180px, 56vw); }
+  .home-bg { inset: -24px -20% auto auto; opacity: 0.9; }
   .match { grid-template-columns: 1fr; text-align: left; }
   .match-team.right { text-align: left; }
   .footer-inner, .auth-shell { grid-template-columns: 1fr; }

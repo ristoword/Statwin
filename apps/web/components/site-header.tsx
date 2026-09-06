@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrandMark } from './brand-mark';
+import { clearTokens, getAccessToken } from '../lib/auth-storage';
 
 const LINKS = [
   { href: '/football', label: 'Calcio' },
@@ -17,12 +18,17 @@ const LINKS = [
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [authed, setAuthed] = useState(false);
+
+  useEffect(() => {
+    setAuthed(Boolean(getAccessToken()));
+  }, [pathname]);
 
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Link href="/" className="brand" onClick={() => setOpen(false)}>
-          <BrandMark id="sw-header" priority />
+        <Link href={authed ? '/dashboard' : '/'} className="brand" onClick={() => setOpen(false)}>
+          {authed ? <BrandMark id="sw-header" priority /> : null}
           <span className="brand-name">
             STAT<span>WIN</span>
           </span>
@@ -48,12 +54,33 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className={`header-cta${open ? ' open' : ''}`}>
-          <Link className="btn-ghost" href="/login" onClick={() => setOpen(false)}>
-            Accedi
-          </Link>
-          <Link className="btn" href="/register" onClick={() => setOpen(false)}>
-            Inizia
-          </Link>
+          {authed ? (
+            <>
+              <Link className="btn-ghost" href="/dashboard" onClick={() => setOpen(false)}>
+                Desk
+              </Link>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  clearTokens();
+                  setAuthed(false);
+                  setOpen(false);
+                }}
+              >
+                Esci
+              </button>
+            </>
+          ) : (
+            <>
+              <Link className="btn-ghost" href="/login" onClick={() => setOpen(false)}>
+                Accedi
+              </Link>
+              <Link className="btn" href="/register" onClick={() => setOpen(false)}>
+                Inizia
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
