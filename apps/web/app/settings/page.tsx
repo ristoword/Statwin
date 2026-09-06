@@ -1,8 +1,18 @@
+import { PageHero } from '../../components/page-hero';
+
 export default function SettingsPage() {
   return (
-    <div className="card">
-      <h1>Impostazioni</h1>
-      <p>Responsible gambling, età minima 18+, disclaimer legale.</p>
-    </div>
+    <>
+      <PageHero kicker="Governance" title="Impostazioni">
+        <p>Trasparenza, età e limiti del prodotto. STATWIN non accetta scommesse.</p>
+      </PageHero>
+      <div className="card">
+        <h3>Gioco responsabile</h3>
+        <p>
+          STATWIN è una piattaforma di analisi statistica. Non è un bookmaker e non accetta scommesse.
+          Accesso riservato ai maggiorenni. Le probabilità sono stime.
+        </p>
+      </div>
+    </>
   );
 }

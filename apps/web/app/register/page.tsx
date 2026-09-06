@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiPost } from '../../lib/api';
 import { saveTokens } from '../../lib/auth-storage';
 
@@ -35,24 +36,37 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="card">
-      <h1>Registrati</h1>
-      <p className="disclaimer">
-        Devi avere almeno 18 anni. STATWIN è analisi statistica: le probabilità sono stime, non certezze.
-      </p>
-      <form onSubmit={onSubmit}>
-        <input name="firstName" placeholder="Nome" />
-        <input name="lastName" placeholder="Cognome" />
-        <input name="email" type="email" placeholder="Email" required />
-        <input name="password" type="password" placeholder="Password (min 8)" required minLength={8} />
-        <label>
-          <input name="acceptTerms" type="checkbox" required /> Accetto termini, disclaimer e restrizione di età
-        </label>
-        {error ? <p className="disclaimer">{error}</p> : null}
-        <button type="submit" disabled={loading}>
-          {loading ? 'Creazione...' : 'Crea account'}
-        </button>
-      </form>
+    <div className="auth-shell">
+      <div className="auth-story">
+        <p className="kicker">Onboarding</p>
+        <h1>Un posto nel desk.</h1>
+        <p>
+          Accesso riservato ai maggiorenni. STATWIN non è un bookmaker: legge i dati, calcola,
+          stima e commenta. Niente di più.
+        </p>
+      </div>
+      <div className="auth card">
+        <p className="kicker">Nuovo profilo</p>
+        <h2 style={{ marginTop: 8 }}>Crea account</h2>
+        <form onSubmit={onSubmit}>
+          <div className="grid-2">
+            <input name="firstName" placeholder="Nome" />
+            <input name="lastName" placeholder="Cognome" />
+          </div>
+          <input name="email" type="email" placeholder="Email" required />
+          <input name="password" type="password" placeholder="Password (min 8)" required minLength={8} />
+          <label>
+            <input name="acceptTerms" type="checkbox" required /> Accetto termini, disclaimer e restrizione di età
+          </label>
+          {error ? <p className="disclaimer">{error}</p> : null}
+          <button type="submit" disabled={loading}>
+            {loading ? 'Creazione...' : 'Entra in piattaforma'}
+          </button>
+        </form>
+        <p className="muted">
+          Hai già un account? <Link href="/login">Accedi</Link>
+        </p>
+      </div>
     </div>
   );
 }

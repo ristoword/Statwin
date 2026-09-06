@@ -1,3 +1,5 @@
+import { ComingSoon } from '../../components/coming-soon';
+
 export default function TennisPage() {
-  return <div className="card"><h1>Tennis</h1><p>Modulo futuro predisposto.</p></div>;
+  return <ComingSoon sport="Tennis" />;
 }

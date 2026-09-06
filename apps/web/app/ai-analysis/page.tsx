@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
+import { EmptyState } from '../../components/empty-state';
 import { GenerateAiButton } from '../../components/generate-ai-button';
+import { PageHero } from '../../components/page-hero';
 
 type ReportList = {
   items?: Array<{
@@ -36,43 +38,57 @@ export default async function AiAnalysisPage() {
   }
 
   return (
-    <div>
-      <span className="badge">ANALISI AI</span>
-      <h1>Analisi AI</h1>
-      <p className="disclaimer">
-        L’AI legge solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Non inventa risultati e non promette vincite.
-        18+.
-      </p>
+    <>
+      <PageHero kicker="GPT-4o" title="Analisi AI">
+        <p className="disclaimer">
+          L’AI legge solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Non inventa risultati e non promette vincite.
+          18+.
+        </p>
+      </PageHero>
 
       <h2>Report recenti</h2>
       {reports.length === 0 ? (
-        <div className="card">Nessun report AI salvato. Generane uno da una partita in archivio.</div>
+        <div className="card">
+          <EmptyState
+            title="Nessun report salvato"
+            body="Genera un’analisi da una partita già in archivio. Senza DATI l’AI non scrive."
+          />
+        </div>
       ) : (
-        reports.map((report) => (
-          <div className="card" key={report.id}>
-            <span className="badge">ANALISI AI</span>
-            <h3>
-              <Link href={`/matches/${report.match?.id}`}>{report.match?.home} vs {report.match?.away}</Link>
-            </h3>
-            <p>{report.content?.analysis ?? 'Sintesi non disponibile.'}</p>
-            <small>{new Date(report.createdAt).toLocaleString('it-IT')}</small>
-          </div>
-        ))
+        <div className="grid">
+          {reports.map((report) => (
+            <div className="card" key={report.id}>
+              <span className="badge badge-ai">ANALISI AI</span>
+              <h3>
+                <Link href={`/matches/${report.match?.id}`}>
+                  {report.match?.home} vs {report.match?.away}
+                </Link>
+              </h3>
+              <p>{report.content?.analysis ?? 'Sintesi non disponibile.'}</p>
+              <p className="muted">{new Date(report.createdAt).toLocaleString('it-IT')}</p>
+            </div>
+          ))}
+        </div>
       )}
 
       <h2>Partite in archivio</h2>
       {matches.length === 0 ? (
-        <div className="card">Nessuna partita sincronizzata. Senza DATI l’AI non produce analisi.</div>
+        <div className="card">
+          <EmptyState
+            title="Archivio vuoto"
+            body="Nessuna partita sincronizzata. Senza DATI l’AI non produce analisi."
+          />
+        </div>
       ) : (
         matches.map((match) => (
           <div className="card" key={match.id}>
-            <span className="badge">DATI</span>
+            <span className="badge badge-data">DATI</span>
             <h3>
               <Link href={`/matches/${match.id}`}>
                 {match.homeTeam?.name} vs {match.awayTeam?.name}
               </Link>
             </h3>
-            <p>
+            <p className="muted">
               {match.competition?.name ?? 'Calcio'}
               {match.kickoff ? ` · ${new Date(match.kickoff).toLocaleString('it-IT')}` : ''}
             </p>
@@ -80,6 +96,6 @@ export default async function AiAnalysisPage() {
           </div>
         ))
       )}
-    </div>
+    </>
   );
 }

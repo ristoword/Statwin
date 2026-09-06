@@ -1,6 +1,72 @@
-body { margin: 0; font-family: Segoe UI, sans-serif; background: #111827; color: #f9fafb; }
-nav { display: flex; gap: 16px; padding: 16px; background: #1f2937; }
-main { padding: 24px; max-width: 1100px; margin: 0 auto; }
-a { color: #93c5fd; }
-.card { background: #1f2937; padding: 16px; border-radius: 12px; margin: 12px 0; }
+:root {
+  color-scheme: dark;
+  --bg: #07080c;
+  --line: rgba(232, 214, 168, 0.14);
+  --text: #f6f1e8;
+  --muted: #9a9386;
+  --gold: #e8c872;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background:
+    radial-gradient(900px 400px at 10% -10%, rgba(232,200,114,0.12), transparent 50%),
+    #07080c;
+  color: var(--text);
+  font-family: Manrope, Segoe UI, sans-serif;
+}
+a { color: inherit; text-decoration: none; }
+nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(7,8,12,0.82);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+}
+nav a {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+nav a:first-child {
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+nav a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+main { padding: 32px 24px; max-width: 1180px; margin: 0 auto; }
+h1 { font-family: Georgia, serif; font-weight: 400; font-size: 48px; margin: 0 0 16px; }
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--line);
+  padding: 20px;
+  border-radius: 18px;
+  margin: 12px 0;
+}
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+input, button { font: inherit; }
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #05060a;
+  color: var(--text);
+}
+button {
+  background: linear-gradient(180deg, #f3de9a, #c8a247);
+  color: #1a1406;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}

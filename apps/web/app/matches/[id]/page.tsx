@@ -72,88 +72,85 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
   const outcomes = probs?.items ?? probs?.outcomes ?? [];
 
   return (
-    <div>
+    <>
+      <p className="kicker">{data?.competition ?? 'Partita'}</p>
       <h1>
-        {data?.homeTeam ?? 'Casa'} vs {data?.awayTeam ?? 'Trasferta'}
+        {data?.homeTeam ?? 'Casa'} <span className="muted">vs</span> {data?.awayTeam ?? 'Trasferta'}
       </h1>
       <p className="disclaimer">
         {layers?.disclaimer ??
           'Distinzione obbligatoria: DATI / STATISTICHE / PROBABILITÀ / ANALISI AI. 18+. Nessuna vincita promessa.'}
       </p>
       <p>
-        <Link href="/matches">Torna alle partite</Link>
+        <Link className="btn-ghost" href="/matches">
+          Torna alle partite
+        </Link>
       </p>
 
-      <div className="card">
-        <span className="badge">DATI</span>
-        <h3>Scheda partita</h3>
-        {data ? (
-          <>
-            <p>
-              {data.competition ?? 'Competizione n/d'} · {data.status} ·{' '}
-              {data.kickoff ? new Date(data.kickoff).toLocaleString('it-IT') : 'orario n/d'}
-            </p>
-            <p>
-              Punteggio:{' '}
-              {data.score ? `${data.score.home} - ${data.score.away}` : 'non presente in archivio (non inventato)'}
-            </p>
-            {data.venue ? <p>Impianto: {data.venue}</p> : null}
-          </>
-        ) : (
-          <p>Nessun DATO in archivio per questa partita.</p>
-        )}
+      <div className="hero broadcast">
+        <span className="badge badge-data">DATI</span>
+        <div className="scoreboard">
+          <b>{data?.score?.home ?? '–'}</b>
+          <span>:</span>
+          <b>{data?.score?.away ?? '–'}</b>
+        </div>
+        <p>
+          {data?.status} · {data?.kickoff ? new Date(data.kickoff).toLocaleString('it-IT') : 'orario n/d'}
+          {data?.venue ? ` · ${data.venue}` : ''}
+        </p>
+        {!data?.score ? <p className="muted">Punteggio non presente in archivio: non viene inventato.</p> : null}
+      </div>
+
+      <div className="grid-2">
+        <div className="card">
+          <span className="badge badge-stats">STATISTICHE</span>
+          <h3>Classifica e forma</h3>
+          {stats ? (
+            <>
+              <p>Casa: {formatStanding(stats.standings?.home)}</p>
+              <p>Trasferta: {formatStanding(stats.standings?.away)}</p>
+              <FormLines block={stats.form?.home} label="Forma casa" />
+              <FormLines block={stats.form?.away} label="Forma trasferta" />
+              {stats.headToHead?.recent?.length ? (
+                <p>
+                  H2H:{' '}
+                  {stats.headToHead.recent
+                    .slice(0, 5)
+                    .map((row) => `${row.home} ${row.score} ${row.away}`)
+                    .join(' · ')}
+                </p>
+              ) : (
+                <p className="muted">Nessuno scontro diretto concluso in archivio.</p>
+              )}
+            </>
+          ) : (
+            <p>Nessuna STATISTICA calcolabile dai DATI esistenti.</p>
+          )}
+        </div>
+
+        <div className="card">
+          <span className="badge badge-prob">PROBABILITÀ</span>
+          <h3>Stime modellistiche</h3>
+          {outcomes.length > 0 ? (
+            outcomes.map((item) => (
+              <div key={item.selection}>
+                <strong>
+                  {item.selection} · {pct(item.probability)}
+                </strong>
+                <div className="prob-bar">
+                  <i style={{ width: `${Math.max(4, item.probability * 100)}%` }} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <p>Nessuna PROBABILITÀ in archivio e classifica insufficiente per stimarla.</p>
+          )}
+          <p className="disclaimer">Stime, non certezze. Non è un consiglio di scommessa.</p>
+        </div>
       </div>
 
       <div className="card">
-        <span className="badge">STATISTICHE</span>
-        <h3>Classifica, forma, scontri diretti</h3>
-        {stats ? (
-          <>
-            {stats.standings?.home || stats.standings?.away ? (
-              <p>
-                Casa: {formatStanding(stats.standings?.home)} · Trasferta: {formatStanding(stats.standings?.away)}
-              </p>
-            ) : (
-              <p>Classifica non disponibile in archivio.</p>
-            )}
-            <FormLines block={stats.form?.home} label="Forma casa" />
-            <FormLines block={stats.form?.away} label="Forma trasferta" />
-            {stats.headToHead?.recent?.length ? (
-              <p>
-                H2H recente:{' '}
-                {stats.headToHead.recent
-                  .slice(0, 5)
-                  .map((row) => `${row.home} ${row.score} ${row.away}`)
-                  .join(' · ')}
-              </p>
-            ) : (
-              <p>Nessuno scontro diretto concluso in archivio.</p>
-            )}
-          </>
-        ) : (
-          <p>Nessuna STATISTICA calcolabile dai DATI esistenti.</p>
-        )}
-      </div>
-
-      <div className="card">
-        <span className="badge">PROBABILITÀ</span>
-        <h3>Stime modellistiche</h3>
-        {outcomes.length > 0 ? (
-          <ul>
-            {outcomes.map((item) => (
-              <li key={item.selection}>
-                {item.selection}: {pct(item.probability)}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>Nessuna PROBABILITÀ in archivio e classifica insufficiente per stimarla.</p>
-        )}
-        <p className="disclaimer">Stime, non certezze. Non è un consiglio di scommessa.</p>
-      </div>
-
-      <div className="card">
-        <span className="badge">ANALISI AI</span>
+        <span className="badge badge-ai">ANALISI AI</span>
         <h3>Lettura dei dati esistenti</h3>
         {ai?.analysis ? (
           <>
@@ -179,7 +176,7 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
               </>
             ) : null}
             {ai.missingData?.length ? (
-              <p>Dati mancanti segnalati dall’AI: {ai.missingData.join(', ')}</p>
+              <p className="muted">Dati mancanti segnalati dall’AI: {ai.missingData.join(', ')}</p>
             ) : null}
             <GenerateAiButton matchId={id} force label="Aggiorna analisi AI" />
           </>
@@ -190,7 +187,7 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -201,11 +198,22 @@ function formatStanding(row?: Standing) {
 
 function FormLines({ block, label }: { block?: FormBlock; label: string }) {
   if (!block?.last?.length) {
-    return <p>{label}: non presente in archivio.</p>;
+    return <p className="muted">{label}: non presente in archivio.</p>;
   }
   return (
-    <p>
-      {label}: {block.last.map((item) => `${item.result} ${item.score} vs ${item.opponent}`).join(' · ')}
-    </p>
+    <div>
+      <p className="muted">{label}</p>
+      <div className="form-dots">
+        {block.last.map((item, index) => (
+          <span
+            key={`${item.opponent}-${index}`}
+            className={`form-dot ${item.result}`}
+            title={`${item.result} ${item.score} vs ${item.opponent}`}
+          >
+            {item.result.slice(0, 1)}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

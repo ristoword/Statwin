@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiPost } from '../../lib/api';
 import { saveTokens } from '../../lib/auth-storage';
 
@@ -19,7 +20,7 @@ export default function LoginPage() {
     const form = new FormData(event.currentTarget);
     try {
       const tokens = await apiPost<AuthResponse>('/auth/login', {
-        email: String(form.get('email') ?? ''),
+        email: String(form.get('email') ?? '').trim(),
         password: String(form.get('password') ?? ''),
       });
       saveTokens(tokens.accessToken, tokens.refreshToken);
@@ -32,20 +33,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="card">
-      <h1>Login</h1>
-      <p className="disclaimer">Piattaforma di analisi statistica. 18+. Nessuna promessa di vincita.</p>
-      <form onSubmit={onSubmit}>
-        <input name="email" type="email" placeholder="Email" required />
-        <input name="password" type="password" placeholder="Password" required minLength={8} />
-        {error ? <p className="disclaimer">{error}</p> : null}
-        <button type="submit" disabled={loading}>
-          {loading ? 'Accesso...' : 'Entra'}
-        </button>
-      </form>
-      <p>
-        <a href="/register">Crea un account</a>
-      </p>
+    <div className="auth-shell">
+      <div className="auth-story">
+        <p className="kicker">Members desk</p>
+        <h1>Bentornato.</h1>
+        <p>Il terminal STATWIN è riservato. Analisi statistica, quattro livelli, nessuna promessa di vincita.</p>
+      </div>
+      <div className="auth card">
+        <p className="kicker">Accesso</p>
+        <h2 style={{ marginTop: 8 }}>Entra in piattaforma</h2>
+        <p className="disclaimer">18+. Le probabilità sono stime modellistiche.</p>
+        <form onSubmit={onSubmit}>
+          <input name="email" type="email" placeholder="Email" required />
+          <input name="password" type="password" placeholder="Password" required minLength={8} />
+          {error ? <p className="disclaimer">{error}</p> : null}
+          <button type="submit" disabled={loading}>
+            {loading ? 'Accesso...' : 'Entra in STATWIN'}
+          </button>
+        </form>
+        <p className="muted">
+          Non hai un account? <Link href="/register">Crea un profilo</Link>
+        </p>
+      </div>
     </div>
   );
 }

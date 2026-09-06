@@ -1,4 +1,6 @@
 import { apiGet } from '../../lib/api';
+import { EmptyState } from '../../components/empty-state';
+import { PageHero } from '../../components/page-hero';
 
 type StatsPayload = {
   note?: string;
@@ -27,29 +29,55 @@ export default async function StatisticsPage() {
   const items = payload.items ?? [];
 
   return (
-    <div>
-      <span className="badge">STATISTICHE</span>
-      <h1>Statistiche</h1>
-      <p>
-        Motore generico indipendente dallo sport: win rate, medie, forma. Questo livello non è ANALISI AI.
-      </p>
-      <p className="disclaimer">{payload.note ?? 'Solo dati già in archivio. 18+.'}</p>
+    <>
+      <PageHero kicker="Motore generico" title="Statistiche">
+        <p>Win rate, medie e forma calcolati sui DATI. Questo livello non è ANALISI AI.</p>
+        <p className="disclaimer">{payload.note ?? 'Solo dati già in archivio. 18+.'}</p>
+      </PageHero>
       {items.length === 0 ? (
-        <div className="card">Nessuna statistica calcolabile: manca la classifica in archivio.</div>
+        <div className="card">
+          <EmptyState
+            title="Motore in attesa"
+            body="Nessuna statistica calcolabile: manca la classifica in archivio."
+          />
+        </div>
       ) : (
-        items.map((row) => (
-          <div className="card" key={`${row.competition}-${row.team}`}>
-            <span className="badge">STATISTICHE</span>
-            <h3>
-              {row.position}. {row.team}
-            </h3>
-            <p>
-              {row.competition} · {row.points} pt · {row.played} gare · {row.wins}V {row.draws}N {row.losses}P ·
-              win rate {(row.winRate * 100).toFixed(0)}% · gol {row.goalsFor}:{row.goalsAgainst}
-            </p>
-          </div>
-        ))
+        <div className="card table-wrap">
+          <span className="badge badge-stats">STATISTICHE</span>
+          <table className="data">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Squadra</th>
+                <th>Campionato</th>
+                <th>Pt</th>
+                <th>G</th>
+                <th>V/N/P</th>
+                <th>Win %</th>
+                <th>Gol</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((row) => (
+                <tr key={`${row.competition}-${row.team}`}>
+                  <td className="pos">{row.position}</td>
+                  <td>{row.team}</td>
+                  <td>{row.competition}</td>
+                  <td>{row.points}</td>
+                  <td>{row.played}</td>
+                  <td>
+                    {row.wins}/{row.draws}/{row.losses}
+                  </td>
+                  <td>{(row.winRate * 100).toFixed(0)}%</td>
+                  <td>
+                    {row.goalsFor}:{row.goalsAgainst}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </div>
+    </>
   );
 }

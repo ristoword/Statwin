@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
+import { EmptyState } from '../../components/empty-state';
+import { MatchCard } from '../../components/match-card';
+import { PageHero } from '../../components/page-hero';
 
 type FootballOverview = {
   sport?: { name: string };
@@ -27,6 +30,9 @@ type Standing = {
   position: number;
   played: number;
   points: number;
+  won?: number;
+  drawn?: number;
+  lost?: number;
   team: { name: string };
 };
 
@@ -83,71 +89,104 @@ export default async function FootballPage({
   const selected = competitions.find((item) => item.id === selectedId);
 
   return (
-    <div>
-      <h1>Calcio</h1>
-      <p className="disclaimer">
-        Campionati italiani da TheSportsDB (Serie A, B, C). Nessun risultato inventato: i punteggi ci sono solo se la fonte li ha chiusi.
-      </p>
+    <>
+      <PageHero kicker="Calcio · Italia" title={selected?.name ?? 'Calcio'}>
+        <p className="disclaimer">
+          Nessun risultato inventato: i punteggi appaiono solo se la fonte ha chiuso la gara.
+        </p>
+      </PageHero>
+
       <div className="grid">
-        <div className="card">
-          <span className="badge">DATI</span>
-          <h3>Competizioni</h3>
-          <p>{overview.counts?.competitions ?? 0}</p>
+        <div className="card stat">
+          <span>Competizioni</span>
+          <strong>{overview.counts?.competitions ?? 0}</strong>
         </div>
-        <div className="card">
-          <span className="badge">DATI</span>
-          <h3>Squadre</h3>
-          <p>{overview.counts?.teams ?? 0}</p>
+        <div className="card stat">
+          <span>Squadre</span>
+          <strong>{overview.counts?.teams ?? 0}</strong>
         </div>
-        <div className="card">
-          <span className="badge">DATI</span>
-          <h3>Partite</h3>
-          <p>{overview.counts?.matches ?? 0}</p>
+        <div className="card stat">
+          <span>Partite</span>
+          <strong>{overview.counts?.matches ?? 0}</strong>
         </div>
       </div>
+
       {competitions.length > 0 ? (
-        <div className="card">
+        <div className="card tabs">
           {competitions.map((competition) => (
             <Link
               key={competition.id}
               href={`/football?c=${competition.id}`}
-              className="badge"
+              className={`chip ${selectedId === competition.id ? 'chip-active' : 'chip-data'}`}
             >
               {competition.name}
-              {selectedId === competition.id ? ' ✓' : ''}
             </Link>
           ))}
         </div>
       ) : null}
-      {selected ? <h2>{selected.name}</h2> : null}
+
+      <h2>Classifica</h2>
       {standings.length > 0 ? (
-        <>
-          <h3>Classifica</h3>
-          <div className="card">
-            <span className="badge">DATI</span>
-            {standings.map((row) => (
-              <p key={`${row.position}-${row.team.name}`}>
-                {row.position}. {row.team.name} — {row.points} pt ({row.played} gare)
-              </p>
-            ))}
-          </div>
-        </>
+        <div className="card table-wrap">
+          <span className="badge badge-data">DATI</span>
+          <table className="data">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Squadra</th>
+                <th>Pt</th>
+                <th>G</th>
+                <th>V</th>
+                <th>N</th>
+                <th>P</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((row) => (
+                <tr key={`${row.position}-${row.team.name}`}>
+                  <td className="pos">{row.position}</td>
+                  <td>{row.team.name}</td>
+                  <td>{row.points}</td>
+                  <td>{row.played}</td>
+                  <td>{row.won ?? '—'}</td>
+                  <td>{row.drawn ?? '—'}</td>
+                  <td>{row.lost ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
-        <div className="card">Classifica non ancora disponibile per questo campionato.</div>
+        <div className="card">
+          <EmptyState
+            title="Classifica in attesa"
+            body="Nessuna tabella ufficiale in archivio per questo campionato. Non viene generata una classifica fittizia."
+          />
+        </div>
       )}
-      <h3>Partite</h3>
+
+      <h2>Partite</h2>
       {matches.length === 0 ? (
-        <div className="card">Nessuna partita sincronizzata per questo campionato.</div>
+        <div className="card">
+          <EmptyState
+            title="Calendario vuoto"
+            body="Nessuna partita sincronizzata per questo campionato. I risultati appariranno solo dalla fonte."
+          />
+        </div>
       ) : (
         matches.map((match) => (
-          <Link key={match.id} href={`/matches/${match.id}`} className="card">
-            <span className="badge">{match.status}</span>
-            {match.homeTeam?.name} {match.homeScore ?? '-'} : {match.awayScore ?? '-'} {match.awayTeam?.name}
-            <br />
-            <small>{new Date(match.kickoff).toLocaleString('it-IT')}</small>
-          </Link>
+          <MatchCard
+            key={match.id}
+            href={`/matches/${match.id}`}
+            home={match.homeTeam?.name}
+            away={match.awayTeam?.name}
+            homeScore={match.homeScore}
+            awayScore={match.awayScore}
+            status={match.status}
+            lines={[new Date(match.kickoff).toLocaleString('it-IT')]}
+          />
         ))
       )}
-    </div>
+    </>
   );
 }

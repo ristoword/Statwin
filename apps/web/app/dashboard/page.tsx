@@ -36,58 +36,84 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div>
-      <h1>Dashboard</h1>
-      <p className="disclaimer">Calcio è lo sport attivo. Le altre sezioni sono predisposte.</p>
+    <>
+      <p className="kicker">Control room</p>
+      <h1>Il tuo desk.</h1>
+      <p className="disclaimer">Calcio attivo. Gli altri sport sono moduli predisposti, senza dati inventati.</p>
       {error ? <p className="disclaimer">{error}</p> : null}
+
       <div className="card">
         {profile ? (
-          <>
-            <p>
-              Ciao {profile.firstName || profile.email} — piano {profile.subscription?.plan ?? 'FREE'}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                clearTokens();
-                setProfile(null);
-              }}
-            >
-              Esci
-            </button>
-          </>
+          <div className="grid-2">
+            <div>
+              <p className="muted">Profilo</p>
+              <h3>
+                {profile.firstName || profile.email}
+              </h3>
+              <p>
+                Piano <strong>{profile.subscription?.plan ?? 'FREE'}</strong> · {profile.role}
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  clearTokens();
+                  setProfile(null);
+                }}
+              >
+                Esci
+              </button>
+            </div>
+          </div>
         ) : (
           <p>
-            <Link href="/login">Accedi</Link> per il profilo e i piani.
+            <Link className="btn" href="/login">Accedi</Link> per profilo, piani e report salvati.
           </p>
         )}
       </div>
+
       <div className="grid">
-        <div className="card">
-          <span className="badge">DATI</span>
-          <h3>{football?.sport?.name ?? 'Calcio'}</h3>
-          <p>
-            Competizioni {football?.counts?.competitions ?? 0} · Squadre {football?.counts?.teams ?? 0} ·
-            Partite {football?.counts?.matches ?? 0}
-          </p>
-          <Link href="/football">Apri calcio</Link>
+        <div className="card stat">
+          <span className="badge badge-data">DATI</span>
+          <span>Competizioni</span>
+          <strong>{football?.counts?.competitions ?? 0}</strong>
         </div>
-        <div className="card">
-          <span className="badge">STATISTICHE</span>
-          <p>Motore generico, indipendente dallo sport.</p>
-          <Link href="/statistics">Apri</Link>
+        <div className="card stat">
+          <span className="badge badge-data">DATI</span>
+          <span>Squadre</span>
+          <strong>{football?.counts?.teams ?? 0}</strong>
         </div>
-        <div className="card">
-          <span className="badge">PROBABILITÀ</span>
-          <p>Stime modellistiche, non certezze.</p>
-          <Link href="/predictions">Apri</Link>
-        </div>
-        <div className="card">
-          <span className="badge">ANALISI AI</span>
-          <p>Solo sui dati forniti.</p>
-          <Link href="/ai-analysis">Apri</Link>
+        <div className="card stat">
+          <span className="badge badge-data">DATI</span>
+          <span>Partite</span>
+          <strong>{football?.counts?.matches ?? 0}</strong>
         </div>
       </div>
-    </div>
+
+      <div className="grid">
+        <Link className="card" href="/football">
+          <span className="badge badge-data">DATI</span>
+          <h3>{football?.sport?.name ?? 'Calcio'}</h3>
+          <p>Classifiche e calendari dai provider collegati.</p>
+        </Link>
+        <Link className="card" href="/statistics">
+          <span className="badge badge-stats">STATISTICHE</span>
+          <h3>Motore generico</h3>
+          <p>Indipendente dallo sport, calcolato sui dati esistenti.</p>
+        </Link>
+        <Link className="card" href="/predictions">
+          <span className="badge badge-prob">PROBABILITÀ</span>
+          <h3>Stime modellistiche</h3>
+          <p>Non sono certezze e non sono consigli di scommessa.</p>
+        </Link>
+        <Link className="card" href="/ai-analysis">
+          <span className="badge badge-ai">ANALISI AI</span>
+          <h3>Lettura GPT-4o</h3>
+          <p>Commenta solo ciò che è già in archivio.</p>
+        </Link>
+      </div>
+    </>
   );
 }

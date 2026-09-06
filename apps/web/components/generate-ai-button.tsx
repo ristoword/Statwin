@@ -32,7 +32,7 @@ export function GenerateAiButton({
 
   return (
     <div>
-      <button type="button" onClick={run} disabled={busy}>
+      <button className="btn" type="button" onClick={run} disabled={busy}>
         {busy ? 'Analisi in corso…' : label}
       </button>
       {error ? <p className="disclaimer">{error}</p> : null}
