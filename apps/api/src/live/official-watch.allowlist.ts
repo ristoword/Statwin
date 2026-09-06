@@ -61,6 +61,17 @@ export const OFFICIAL_HOSTS = [
   'ziggosport.nl',
   'supersport.com',
   'mlssoccer.com',
+  'nba.com',
+  'euroleaguebasketball.net',
+  'nfl.com',
+  'mlb.com',
+  'nhl.com',
+  'formula1.com',
+  'ufc.com',
+  'atptour.com',
+  'wtatennis.com',
+  'pgatour.com',
+  'lpga.com',
 ] as const;
 
 const UNOFFICIAL_NAME =

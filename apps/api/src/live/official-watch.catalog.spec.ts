@@ -10,6 +10,9 @@ describe('official watch catalog', () => {
     expect(findCatalogEntry('1. Bundesliga', 'Germany')?.id).toBe('bundesliga');
     expect(findCatalogEntry('2. Bundesliga')?.id).toBe('bundesliga-2');
     expect(findCatalogEntry('Serie C Girone C')?.id).toBe('serie-c');
+    expect(findCatalogEntry('NBA')?.id).toBe('nba');
+    expect(findCatalogEntry('NFL')?.id).toBe('nfl');
+    expect(findCatalogEntry('Formula 1')?.id).toBe('formula-1');
   });
 
   it('does not invent a listing for unknown competitions', () => {

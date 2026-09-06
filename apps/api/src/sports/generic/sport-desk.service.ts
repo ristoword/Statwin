@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
+import { EMPTY_SPORTS, findWiredSport } from '../../data-providers/thesportsdb/wired-sports';
 import { findSport } from '../sport-catalog';
 
 @Injectable()
 export class SportDeskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly predictions: PredictionEngineService,
+  ) {}
 
   async overview(slug: string) {
     const catalog = findSport(slug);
@@ -18,14 +23,19 @@ export class SportDeskService {
         ])
       : [0, 0, 0];
 
+    const empty = EMPTY_SPORTS.find((item) => item.slug === slug);
+    const wired = findWiredSport(slug);
+    const synced = catalog?.status === 'synced' || Boolean(wired) || slug === 'basketball' || slug === 'football';
+
     return {
       sport: sport ?? { slug, name: catalog?.name ?? slug, isActive: false },
       catalog: catalog ?? null,
       counts: { competitions, teams, matches },
       competitions: [] as unknown[],
       events: [] as unknown[],
-      note:
-        catalog?.status === 'synced'
+      note: empty
+        ? empty.reason
+        : synced
           ? 'Nessun risultato sportivo inventato. I dati arrivano dai provider dopo la sincronizzazione.'
           : 'Sport predisposto. Nessun risultato, quota o classifica viene inventato in attesa di un provider ufficiale.',
     };
@@ -40,9 +50,16 @@ export class SportDeskService {
   }
 
   async events(slug: string) {
+    return this.agenda(slug);
+  }
+
+  async matches(slug: string, competitionId?: string, includeEstimates = false) {
     const include = { homeTeam: true, awayTeam: true, competition: true, sport: true } as const;
     const now = new Date();
-    const where = { sport: { slug } };
+    const where = {
+      sport: { slug },
+      ...(competitionId ? { competitionId } : {}),
+    };
     const [upcoming, recent] = await Promise.all([
       this.prisma.match.findMany({
         where: { ...where, kickoff: { gte: now } },
@@ -57,6 +74,102 @@ export class SportDeskService {
         take: 20,
       }),
     ]);
-    return { recent, upcoming };
+    const estimates = includeEstimates
+      ? await this.estimatesFor([...recent, ...upcoming])
+      : new Map<string, ReturnType<PredictionEngineService['estimate']>>();
+    return {
+      recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
+      upcoming: upcoming.map((match) => this.withEstimate(match, estimates.get(match.id))),
+    };
+  }
+
+  matchById(slug: string, id: string) {
+    return this.prisma.match.findFirst({
+      where: { id, sport: { slug } },
+      include: {
+        sport: true,
+        homeTeam: true,
+        awayTeam: true,
+        competition: true,
+        season: true,
+        events: true,
+        lineups: { include: { player: true, team: true } },
+        odds: { include: { bookmaker: true, market: true } },
+        predictions: true,
+        aiReports: true,
+      },
+    });
+  }
+
+  teams(slug: string) {
+    return this.prisma.team.findMany({
+      where: { sport: { slug } },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  standings(slug: string, competitionId?: string) {
+    return this.prisma.standing.findMany({
+      where: {
+        season: {
+          isCurrent: true,
+          competition: {
+            sport: { slug },
+            ...(competitionId ? { id: competitionId } : {}),
+          },
+        },
+      },
+      include: { team: true, season: { include: { competition: true } } },
+      orderBy: { position: 'asc' },
+    });
+  }
+
+  private agenda(slug: string) {
+    return this.matches(slug);
+  }
+
+  private async estimatesFor(
+    matches: Array<{ id: string; homeTeamId: string; awayTeamId: string; seasonId: string | null }>,
+  ) {
+    const result = new Map<string, ReturnType<PredictionEngineService['estimate']>>();
+    const seasonIds = [...new Set(matches.map((item) => item.seasonId).filter((id): id is string => Boolean(id)))];
+    if (seasonIds.length === 0) return result;
+    const standings = await this.prisma.standing.findMany({
+      where: { seasonId: { in: seasonIds } },
+    });
+    const byKey = new Map(standings.map((row) => [`${row.seasonId}:${row.teamId}`, row]));
+    for (const match of matches) {
+      if (!match.seasonId) continue;
+      const home = byKey.get(`${match.seasonId}:${match.homeTeamId}`);
+      const away = byKey.get(`${match.seasonId}:${match.awayTeamId}`);
+      if (!home || !away || home.played === 0 || away.played === 0) continue;
+      result.set(
+        match.id,
+        this.predictions.estimate({
+          homeStrength: home.points / (home.played * 3),
+          awayStrength: away.points / (away.played * 3),
+        }),
+      );
+    }
+    return result;
+  }
+
+  private withEstimate<T extends { id: string }>(
+    match: T,
+    estimate?: ReturnType<PredictionEngineService['estimate']>,
+  ) {
+    return {
+      ...match,
+      estimate: estimate
+        ? {
+            layer: 'PROBABILITY',
+            predictedScore: estimate.predictedScore,
+            outcomes: estimate.outcomes,
+            overUnder: estimate.overUnder,
+            btts: estimate.btts,
+            impliedOddsDisclaimer: estimate.impliedOddsDisclaimer,
+          }
+        : null,
+    };
   }
 }

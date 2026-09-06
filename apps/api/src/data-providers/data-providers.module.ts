@@ -6,6 +6,7 @@ import { TheSportsDbProvider } from './football/thesportsdb.provider';
 import { CompositeFootballProvider } from './football/composite-football.provider';
 import { BasketballDataProvider, FootballDataProvider } from './interfaces/sports-data-provider';
 import { TheSportsDbBasketballProvider } from './basketball/thesportsdb-basketball.provider';
+import { TheSportsDbSportFactory } from './thesportsdb/thesportsdb-sport.provider';
 
 export const FOOTBALL_DATA_PROVIDER = Symbol('FOOTBALL_DATA_PROVIDER');
 export const BASKETBALL_DATA_PROVIDER = Symbol('BASKETBALL_DATA_PROVIDER');
@@ -18,6 +19,7 @@ export const BASKETBALL_DATA_PROVIDER = Symbol('BASKETBALL_DATA_PROVIDER');
     TheSportsDbProvider,
     CompositeFootballProvider,
     TheSportsDbBasketballProvider,
+    TheSportsDbSportFactory,
     {
       provide: FOOTBALL_DATA_PROVIDER,
       inject: [
@@ -47,6 +49,6 @@ export const BASKETBALL_DATA_PROVIDER = Symbol('BASKETBALL_DATA_PROVIDER');
       useFactory: (thesportsdb: TheSportsDbBasketballProvider): BasketballDataProvider => thesportsdb,
     },
   ],
-  exports: [FOOTBALL_DATA_PROVIDER, BASKETBALL_DATA_PROVIDER],
+  exports: [FOOTBALL_DATA_PROVIDER, BASKETBALL_DATA_PROVIDER, TheSportsDbSportFactory],
 })
 export class DataProvidersModule {}

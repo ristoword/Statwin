@@ -5,8 +5,10 @@ import { AiEngineModule } from '../ai-engine/ai-engine.module';
 import { DataProvidersModule } from '../data-providers/data-providers.module';
 import { OddsProvidersModule } from '../odds-providers/odds-providers.module';
 import { FootballModule } from '../sports/football/football.module';
+import { SportsModule } from '../sports/sports.module';
 import { JobsService } from './jobs.service';
 import { SyncProcessor } from './sync/sync.processor';
+import { SyncScheduler } from './sync/sync.scheduler';
 import { StatisticsProcessor } from './statistics/statistics.processor';
 import { OddsProcessor } from './odds/odds.processor';
 import { AiReportsProcessor } from './ai-reports/ai-reports.processor';
@@ -17,6 +19,7 @@ import { AiReportsProcessor } from './ai-reports/ai-reports.processor';
     DataProvidersModule,
     OddsProvidersModule,
     FootballModule,
+    SportsModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -37,7 +40,7 @@ import { AiReportsProcessor } from './ai-reports/ai-reports.processor';
       { name: 'ai-reports' },
     ),
   ],
-  providers: [JobsService, SyncProcessor, StatisticsProcessor, OddsProcessor, AiReportsProcessor],
+  providers: [JobsService, SyncProcessor, SyncScheduler, StatisticsProcessor, OddsProcessor, AiReportsProcessor],
   exports: [JobsService],
 })
 export class JobsModule {}

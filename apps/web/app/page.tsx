@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { apiV1, apiGet } from '../lib/api';
 import { asAgenda } from '../lib/agenda';
 import { MatchAgenda } from '../components/match-agenda';
-import { SportsGrid } from '../components/sports-grid';
+import { SportsDirectory } from '../components/sports-directory';
 
 type FootballOverview = {
   counts?: { competitions: number; teams: number; matches: number };
@@ -116,10 +116,10 @@ export default async function Home() {
 
       <h2 id="sport">Sport del desk</h2>
       <p className="muted">
-        Analisi, non bookmaker. Calcio e basket possono avere fonti collegate; gli altri sport restano
-        predisposti con archivio vuoto.
+        Analisi, non bookmaker. I desk sincronizzati mostrano i conteggi dal provider. L’ippica resta
+        vuota: nessun feed pubblico legale.
       </p>
-      <SportsGrid />
+      <SportsDirectory />
 
       <section className="cta-band">
         <p className="kicker">Accesso riservato</p>

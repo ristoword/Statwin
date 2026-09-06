@@ -245,6 +245,66 @@ export const OFFICIAL_WATCH_CATALOG: CatalogEntry[] = [
     country: 'World',
     listings: [league('fifa-wc', 'FIFA', 'https://www.fifa.com/', 'Mondo')],
   },
+  {
+    id: 'nba',
+    aliases: ['nba', 'national basketball association'],
+    country: 'USA',
+    listings: [league('nba', 'NBA', 'https://www.nba.com/', 'USA')],
+  },
+  {
+    id: 'euroleague',
+    aliases: ['euroleague', 'euroleague basketball'],
+    country: 'Europe',
+    listings: [league('euroleague', 'EuroLeague', 'https://www.euroleaguebasketball.net/', 'Europa')],
+  },
+  {
+    id: 'nfl',
+    aliases: ['nfl', 'national football league'],
+    country: 'USA',
+    listings: [league('nfl', 'NFL', 'https://www.nfl.com/', 'USA')],
+  },
+  {
+    id: 'mlb',
+    aliases: ['mlb', 'major league baseball'],
+    country: 'USA',
+    listings: [league('mlb', 'MLB', 'https://www.mlb.com/', 'USA')],
+  },
+  {
+    id: 'nhl',
+    aliases: ['nhl', 'national hockey league'],
+    country: 'USA',
+    listings: [league('nhl', 'NHL', 'https://www.nhl.com/', 'USA')],
+  },
+  {
+    id: 'formula-1',
+    aliases: ['formula 1', 'formula one', 'f1'],
+    country: 'World',
+    listings: [league('f1', 'Formula 1', 'https://www.formula1.com/', 'Mondo')],
+  },
+  {
+    id: 'ufc',
+    aliases: ['ufc', 'ultimate fighting championship'],
+    country: 'USA',
+    listings: [league('ufc', 'UFC', 'https://www.ufc.com/', 'USA')],
+  },
+  {
+    id: 'atp',
+    aliases: ['atp', 'atp tour', 'atp world tour'],
+    country: 'World',
+    listings: [league('atp', 'ATP Tour', 'https://www.atptour.com/', 'Mondo')],
+  },
+  {
+    id: 'wta',
+    aliases: ['wta', 'wta tour'],
+    country: 'World',
+    listings: [league('wta', 'WTA', 'https://www.wtatennis.com/', 'Mondo')],
+  },
+  {
+    id: 'pga-tour',
+    aliases: ['pga tour', 'pga'],
+    country: 'USA',
+    listings: [league('pga', 'PGA Tour', 'https://www.pgatour.com/', 'USA')],
+  },
 ];
 
 function aliasMatches(name: string, alias: string): boolean {

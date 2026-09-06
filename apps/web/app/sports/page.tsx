@@ -1,5 +1,5 @@
 import { PageHero } from '../../components/page-hero';
-import { SportsGrid } from '../../components/sports-grid';
+import { SportsDirectory } from '../../components/sports-directory';
 
 export default function SportsPage() {
   return (
@@ -10,12 +10,12 @@ export default function SportsPage() {
           promette vincite. I punteggi esistono solo se una fonte ufficiale li ha chiusi.
         </p>
         <p>
-          Calcio e basket possono avere dati sincronizzati. Gli altri desk sono predisposti: archivio
-          vuoto, nessuna classifica inventata. L’AI legge tutti gli sport in archivio; senza DATI
-          non scrive.
+          Ogni desk sincronizzato ha calendari (ultime/prossime), classifiche se la fonte le ha, e
+          le quattro layer DATI / STATISTICHE / PROBABILITÀ / ANALISI AI. L’ippica resta vuota:
+          nessun feed pubblico legale. L’AI non scrive senza DATI.
         </p>
       </PageHero>
-      <SportsGrid />
+      <SportsDirectory />
     </>
   );
 }

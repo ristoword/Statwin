@@ -432,7 +432,7 @@ export class AdminService {
   jobs() {
     return {
       queues: ['sync', 'statistics', 'odds', 'ai-reports'],
-      note: 'I job sono predisposti. Nessuna sincronizzazione automatica è attiva senza provider.',
+      note: 'La coda sync aggiorna calcio, basket e gli altri sport TheSportsDB in sequenza (backoff 429). Intervallo: SPORTS_SYNC_INTERVAL_MS.',
     };
   }
 

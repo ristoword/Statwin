@@ -7,7 +7,11 @@ export class SportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async list() {
-    const rows = await this.prisma.sport.findMany();
+    const rows = await this.prisma.sport.findMany({
+      include: {
+        _count: { select: { competitions: true, teams: true, matches: true } },
+      },
+    });
     const bySlug = new Map(rows.map((row) => [row.slug, row]));
     return SPORT_CATALOG.map((item) => {
       const row = bySlug.get(item.slug);
@@ -21,6 +25,11 @@ export class SportsService {
         focus: item.focus,
         blurb: item.blurb,
         eventNoun: item.eventNoun,
+        counts: {
+          competitions: row?._count.competitions ?? 0,
+          teams: row?._count.teams ?? 0,
+          matches: row?._count.matches ?? 0,
+        },
       };
     });
   }

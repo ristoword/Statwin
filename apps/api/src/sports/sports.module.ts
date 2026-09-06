@@ -10,6 +10,7 @@ import { HorseRacingModule } from './horse-racing/horse-racing.module';
 import { BaseballModule } from './baseball/baseball.module';
 import { Formula1Module } from './formula1/formula1.module';
 import { PredisposedSportsModule } from './generic/predisposed-sports.module';
+import { SportsSyncCoordinator } from './generic/sports-sync.coordinator';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { PredisposedSportsModule } from './generic/predisposed-sports.module';
     Formula1Module,
   ],
   controllers: [SportsController, MatchesController],
-  providers: [SportsService],
-  exports: [SportsService, FootballModule],
+  providers: [SportsService, SportsSyncCoordinator],
+  exports: [SportsService, FootballModule, PredisposedSportsModule, SportsSyncCoordinator],
 })
 export class SportsModule {}

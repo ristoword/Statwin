@@ -19,14 +19,14 @@ import { OddsProvidersModule } from './odds-providers/odds-providers.module';
 import { JobsModule } from './jobs/jobs.module';
 import { HealthModule } from './health/health.module';
 import { LiveModule } from './live/live.module';
-import { appConfig, databaseConfig, redisConfig, aiConfig, paymentsConfig, footballConfig, basketballConfig } from './config';
+import { appConfig, databaseConfig, redisConfig, aiConfig, paymentsConfig, footballConfig, basketballConfig, sportsSyncConfig } from './config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      load: [appConfig, databaseConfig, redisConfig, aiConfig, paymentsConfig, footballConfig, basketballConfig],
+      load: [appConfig, databaseConfig, redisConfig, aiConfig, paymentsConfig, footballConfig, basketballConfig, sportsSyncConfig],
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     PrismaModule,

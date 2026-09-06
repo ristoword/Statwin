@@ -66,6 +66,22 @@ async function load(apiPath: string, competitionId?: string) {
   }
 }
 
+function groupByCountry(items: Competition[]) {
+  const groups = new Map<string, Competition[]>();
+  for (const item of items) {
+    const key = item.country?.trim() || 'Internazionale';
+    const list = groups.get(key) ?? [];
+    list.push(item);
+    groups.set(key, list);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], 'it'))
+    .map(([country, competitions]) => ({
+      country,
+      competitions: competitions.sort((a, b) => a.name.localeCompare(b.name, 'it')),
+    }));
+}
+
 export async function SyncedSportPage({
   slug,
   competitionId,
@@ -78,6 +94,7 @@ export async function SyncedSportPage({
 
   const { overview, competitions, selectedId, matches, standings } = await load(sport.apiPath, competitionId);
   const selected = competitions.find((item) => item.id === selectedId);
+  const groups = groupByCountry(competitions);
   const emptyArchive =
     competitions.length === 0 &&
     (overview.counts?.matches ?? 0) === 0 &&
@@ -107,16 +124,23 @@ export async function SyncedSportPage({
         </div>
       </div>
 
-      {competitions.length > 0 ? (
-        <div className="card tabs">
-          {competitions.map((competition) => (
-            <Link
-              key={competition.id}
-              href={`${sport.href}?c=${competition.id}`}
-              className={`chip ${selectedId === competition.id ? 'chip-active' : 'chip-data'}`}
-            >
-              {competition.name}
-            </Link>
+      {groups.length > 0 ? (
+        <div className="card league-board">
+          {groups.map((group) => (
+            <section className="league-country" key={group.country}>
+              <p className="muted league-country-label">{group.country}</p>
+              <div className="tabs">
+                {group.competitions.map((competition) => (
+                  <Link
+                    key={competition.id}
+                    href={`${sport.href}?c=${competition.id}`}
+                    className={`chip ${selectedId === competition.id ? 'chip-active' : 'chip-data'}`}
+                  >
+                    {competition.name}
+                  </Link>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       ) : null}
@@ -165,7 +189,7 @@ export async function SyncedSportPage({
         <div className="card coming-panel">
           <EmptyState
             title={`${sport.name}: nessun dato sincronizzato`}
-            body="L'archivio resta vuoto finche il provider non restituisce gare. Per il basket: POST /api/v1/basketball/sync. Nessun punteggio viene inventato."
+            body={`L'archivio resta vuoto finche il provider non restituisce gare. Sincronizza con POST /api/v1/${sport.apiPath}/sync oppure POST /api/v1/sports/sync. Nessun punteggio viene inventato.`}
           />
         </div>
       ) : (

@@ -1,6 +1,6 @@
 # STATWIN — Sports Analytics AI
 
-Piattaforma SaaS di **analisi statistica sportiva**. Il **calcio** è il primo sport sincronizzato; il **basket** (NBA / Euroleague via TheSportsDB) è il secondo. Gli altri desk — tennis, pallavolo, baseball, NFL, hockey, F1, ippica, rugby, pallamano, MMA, golf, ciclismo, cricket, darts — sono moduli predisposti: archivio vuoto, nessun risultato inventato.
+Piattaforma SaaS di **analisi statistica sportiva**. Il **calcio** (TheSportsDB + OpenLigaDB) e gli altri desk TheSportsDB — basket, tennis, pallavolo, MLB, NFL, NHL, F1, rugby, pallamano, UFC, golf, ciclismo, IPL, darts — si aggiornano via sync. **Ippica** resta vuota: nessun feed pubblico legale. Nessun risultato inventato.
 
 STATWIN non è un bookmaker. Le probabilità sono **stime**, non certezze. Non promette vincite. Accesso 18+.
 
@@ -105,7 +105,8 @@ Prefisso: `/api/v1`
 - `/sports`
 - `/football`
 - `/basketball`
-- `/tennis` e gli altri sport del catalogo (overview + competitions/events vuoti se predisposti)
+- `/tennis` e gli altri sport del catalogo (`GET` overview/matches/standings, `POST /{sport}/sync`)
+- `POST /sports/sync` sincronizza tutti gli sport cablati in sequenza (backoff 429)
 - `/matches`
 - `/statistics`
 - `/predictions` (piano PREMIUM+)
@@ -131,13 +132,15 @@ curl -X POST http://localhost:3001/api/v1/football/sync
 
 Per aggiungere un campionato: metti l’ID TheSportsDB in `THESPORTSDB_LEAGUES` o lo shortcut OpenLigaDB in `OPENLIGADB_LEAGUES`. Un altro provider si collega implementando `FootballDataProvider`, senza toccare i controller.
 
-Provider basket: **TheSportsDB** (NBA `4387`, EuroLeague `4546`). Sync:
+Provider basket e altri sport: **TheSportsDB**. Nome e paese arrivano da `lookupleague.php`, non da elenchi Italia hard-coded. Prefissi `externalId` per sport (`tsd-bsk:`, `tsd:nfl:`, `tsd:tennis:`, …). Solo punteggi `FINISHED` della fonte.
 
 ```bash
 curl -X POST http://localhost:3001/api/v1/basketball/sync
+curl -X POST http://localhost:3001/api/v1/american-football/sync
+curl -X POST http://localhost:3001/api/v1/sports/sync
 ```
 
-Stagione e leghe: `THESPORTSDB_BASKETBALL_SEASON` e `THESPORTSDB_BASKETBALL_LEAGUES`. Solo punteggi `FINISHED` restituiti dalla fonte. Gli altri sport restano desk predisposti (`GET /{sport}` con array vuoti) finché non esiste un provider legale.
+Stagioni e liste ID: `THESPORTSDB_BASKETBALL_LEAGUES`, `THESPORTSDB_TENNIS_LEAGUES`, `THESPORTSDB_NFL_LEAGUES`, … (vedi `.env.example`). Intervallo job: `SPORTS_SYNC_INTERVAL_MS` (default 6h). TheSportsDB 429 è reale: le richieste sono scaglionate. **Ippica** non ha provider: `POST /horse-racing/sync` risponde con nota onesta e archivio vuoto.
 
 ## Piani
 

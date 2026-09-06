@@ -1,5 +1,10 @@
-import { SportDesk } from '../../components/sport-desk';
+import { SyncedSportPage } from '../../components/synced-sport-page';
 
-export default function GolfPage() {
-  return <SportDesk slug="golf" />;
+export default async function GolfPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
+  const { c } = await searchParams;
+  return <SyncedSportPage slug="golf" competitionId={c} />;
 }
