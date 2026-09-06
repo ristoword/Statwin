@@ -18,9 +18,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx prisma generate --schema=prisma/schema.prisma \
-  && cd apps/api && node ../../node_modules/@nestjs/cli/bin/nest.js build \
-  && cd ../web && node ../../node_modules/next/dist/bin/next build
+RUN npx prisma generate --schema=prisma/schema.prisma
+RUN cd /app/apps/api && ./node_modules/.bin/nest build
+RUN cd /app/apps/web && /app/node_modules/.bin/next build
 
 FROM node:20-alpine AS runner
 RUN apk add --no-cache openssl libc6-compat
