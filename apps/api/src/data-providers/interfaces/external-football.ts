@@ -24,6 +24,8 @@ export type ExternalMatch = {
   seasonName: string;
   homeTeamExternalId: string;
   awayTeamExternalId: string;
+  homeTeamName?: string;
+  awayTeamName?: string;
   kickoff: Date;
   status: MatchStatus;
   homeScore: number | null;

@@ -145,8 +145,18 @@ export class FootballSyncService {
     const teamByExternal = new Map(teams.map((team) => [team.externalId, team.id]));
 
     for (const match of incoming) {
-      const homeTeamId = teamByExternal.get(match.homeTeamExternalId);
-      const awayTeamId = teamByExternal.get(match.awayTeamExternalId);
+      const homeTeamId = await this.ensureTeam(
+        sportId,
+        match.homeTeamExternalId,
+        match.homeTeamName,
+        teamByExternal,
+      );
+      const awayTeamId = await this.ensureTeam(
+        sportId,
+        match.awayTeamExternalId,
+        match.awayTeamName,
+        teamByExternal,
+      );
       if (!homeTeamId || !awayTeamId) {
         this.logger.warn(`Skip match ${match.externalId}: squadra mancante`);
         continue;
@@ -198,6 +208,24 @@ export class FootballSyncService {
     }
 
     return incoming.length;
+  }
+
+  private async ensureTeam(
+    sportId: string,
+    externalId: string,
+    name: string | undefined,
+    cache: Map<string | null, string>,
+  ): Promise<string | undefined> {
+    const existing = cache.get(externalId);
+    if (existing) return existing;
+    if (!name) return undefined;
+    const team = await this.prisma.team.upsert({
+      where: { externalId },
+      update: { name },
+      create: { sportId, externalId, name, country: 'Italy' },
+    });
+    cache.set(externalId, team.id);
+    return team.id;
   }
 
   private async upsertStandings(seasonId: string, competition: ExternalCompetition) {

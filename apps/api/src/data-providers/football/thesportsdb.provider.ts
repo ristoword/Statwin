@@ -170,6 +170,8 @@ export class TheSportsDbProvider implements FootballDataProvider {
       seasonName: competition.seasonName,
       homeTeamExternalId: event.idHomeTeam ? `tsd:team:${event.idHomeTeam}` : `tsd:team-name:${slug(event.strHomeTeam)}`,
       awayTeamExternalId: event.idAwayTeam ? `tsd:team:${event.idAwayTeam}` : `tsd:team-name:${slug(event.strAwayTeam)}`,
+      homeTeamName: event.strHomeTeam,
+      awayTeamName: event.strAwayTeam,
       kickoff: this.parseKickoff(event),
       status: finished ? MatchStatus.FINISHED : live ? MatchStatus.LIVE : MatchStatus.SCHEDULED,
       homeScore: finished ? homeScore : null,
@@ -191,12 +193,18 @@ export class TheSportsDbProvider implements FootballDataProvider {
 
   private async getJson<T>(path: string): Promise<T> {
     const url = `${this.baseUrl}/${this.apiKey}${path.startsWith('/') ? path : `/${path}`}`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) {
+    let lastError: Error | undefined;
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt === 1 ? 400 : 1500 * attempt));
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        return (await res.json()) as T;
+      }
       if (res.status === 404) return {} as T;
-      throw new Error(`TheSportsDB ${path} failed: ${res.status}`);
+      lastError = new Error(`TheSportsDB ${path} failed: ${res.status}`);
+      if (res.status !== 429 && res.status < 500) break;
     }
-    return (await res.json()) as T;
+    throw lastError ?? new Error(`TheSportsDB ${path} failed`);
   }
 }
 
