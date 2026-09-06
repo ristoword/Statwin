@@ -19,8 +19,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate --schema=prisma/schema.prisma \
-  && npm exec --workspace=@statwin/api -- nest build \
-  && npm exec --workspace=@statwin/web -- next build
+  && cd apps/api && node ../../node_modules/@nestjs/cli/bin/nest.js build \
+  && cd ../web && node ../../node_modules/next/dist/bin/next build
 
 FROM node:20-alpine AS runner
 RUN apk add --no-cache openssl libc6-compat
