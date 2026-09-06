@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ensureDatabase, run } from './ensure-db.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -13,21 +14,6 @@ function normalizeDatabaseUrl() {
   if (process.env.RAILWAY_ENVIRONMENT && !/[?&]sslmode=/.test(url)) {
     process.env.DATABASE_URL = `${url}${url.includes('?') ? '&' : '?'}sslmode=require`;
   }
-}
-
-function run(command, args) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: root,
-      stdio: 'inherit',
-      env: process.env,
-      shell: process.platform === 'win32',
-    });
-    child.on('exit', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${command} ${args.join(' ')} exited with ${code}`));
-    });
-  });
 }
 
 async function waitForApi(url, timeoutMs = 60_000) {
@@ -66,7 +52,7 @@ async function main() {
     console.warn('JWT_SECRET is weak or missing. Set a long random value in Railway.');
   }
 
-  await run('npx', ['prisma', 'migrate', 'deploy', '--schema=prisma/schema.prisma']);
+  await ensureDatabase();
 
   if (process.env.SEED_ON_BOOT !== 'false') {
     await run('npx', ['tsx', 'prisma/seed.ts']);
