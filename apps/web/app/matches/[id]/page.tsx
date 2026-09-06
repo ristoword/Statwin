@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
 import { GenerateAiButton } from '../../../components/generate-ai-button';
+import { MarketBoard } from '../../../components/market-board';
+import { PredictedResult } from '../../../components/predicted-result';
 
 type Layers = {
   disclaimer?: string;
@@ -23,6 +25,28 @@ type Layers = {
     source?: string;
     items?: Array<{ selection: string; probability: number }>;
     outcomes?: Array<{ selection: string; probability: number }>;
+    predictedScore?: {
+      home?: number;
+      away?: number;
+      outcome?: string;
+      homeXg?: number;
+      awayXg?: number;
+      scoreProbability?: number;
+    } | null;
+    overUnder?: Array<{
+      line: number;
+      over: number;
+      under: number;
+      impliedOver?: number | null;
+      impliedUnder?: number | null;
+    }> | null;
+    btts?: { yes: number; no: number; impliedYes?: number | null; impliedNo?: number | null } | null;
+    impliedOddsDisclaimer?: string | null;
+    modelOutcomes?: Array<{ selection: string; probability: number; impliedOdds?: number | null }>;
+  } | null;
+  odds?: {
+    disclaimer?: string;
+    items?: Array<{ bookmaker?: string; market?: string; selection?: string; price?: number }>;
   } | null;
   aiAnalysis?: {
     content?: {
@@ -31,6 +55,13 @@ type Layers = {
       unfavorable?: string[];
       missingData?: string[];
       disclaimer?: string;
+      predictedResult?: {
+        outcome?: string;
+        scoreHome?: number;
+        scoreAway?: number;
+        confidence?: string;
+        rationale?: string | null;
+      } | null;
     };
     createdAt?: string;
   } | null;
@@ -69,7 +100,8 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
   const stats = layers?.statistics;
   const probs = layers?.probabilities;
   const ai = layers?.aiAnalysis?.content;
-  const outcomes = probs?.items ?? probs?.outcomes ?? [];
+  const outcomes = probs?.modelOutcomes ?? probs?.items ?? probs?.outcomes ?? [];
+  const odds = layers?.odds?.items ?? [];
 
   return (
     <>
@@ -145,8 +177,47 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
           ) : (
             <p>Nessuna PROBABILITÀ in archivio e classifica insufficiente per stimarla.</p>
           )}
+          <PredictedResult
+            variant="prob"
+            title="Risultato previsto · modello"
+            home={data?.homeTeam}
+            away={data?.awayTeam}
+            prediction={probs?.predictedScore}
+          />
+          <MarketBoard
+            outcomes={outcomes}
+            overUnder={probs?.overUnder}
+            btts={probs?.btts}
+            disclaimer={probs?.impliedOddsDisclaimer}
+          />
           <p className="disclaimer">Stime, non certezze. Non è un consiglio di scommessa.</p>
         </div>
+      </div>
+
+      <div className="card">
+        <span className="badge badge-data">DATI</span>
+        <h3>Quotazioni bookmaker</h3>
+        {odds.length > 0 ? (
+          <>
+            <p className="muted">{layers?.odds?.disclaimer}</p>
+            <div className="quote-grid">
+              {odds.map((odd, index) => (
+                <div className="quote-chip" key={`${odd.bookmaker}-${odd.selection}-${index}`}>
+                  <span>{odd.bookmaker}</span>
+                  <strong>
+                    {odd.market} · {odd.selection}
+                  </strong>
+                  <em>{odd.price?.toFixed(2)}</em>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="muted">
+            Nessuna quota bookmaker in archivio. Le cifre sopra sono solo quote implicite del modello, non scommesse
+            accettate.
+          </p>
+        )}
       </div>
 
       <div className="card">
@@ -178,6 +249,23 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
             {ai.missingData?.length ? (
               <p className="muted">Dati mancanti segnalati dall’AI: {ai.missingData.join(', ')}</p>
             ) : null}
+            <PredictedResult
+              variant="ai"
+              title="Risultato previsto · AI"
+              home={data?.homeTeam}
+              away={data?.awayTeam}
+              prediction={
+                ai.predictedResult
+                  ? {
+                      home: ai.predictedResult.scoreHome,
+                      away: ai.predictedResult.scoreAway,
+                      outcome: ai.predictedResult.outcome,
+                      confidence: ai.predictedResult.confidence,
+                      rationale: ai.predictedResult.rationale,
+                    }
+                  : null
+              }
+            />
             <GenerateAiButton matchId={id} force label="Aggiorna analisi AI" />
           </>
         ) : (

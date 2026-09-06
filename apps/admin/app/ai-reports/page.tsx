@@ -7,7 +7,10 @@ type Report = {
   id: string;
   type: string;
   createdAt: string;
-  content?: { analysis?: string };
+  content?: {
+    analysis?: string;
+    predictedResult?: { scoreHome?: number; scoreAway?: number; outcome?: string } | null;
+  };
   match?: {
     home?: string;
     away?: string;
@@ -63,7 +66,7 @@ export default function Page() {
   return (
     <div>
       <h1>AI reports</h1>
-      <p>Analisi generate solo sui DATI / STATISTICHE / PROBABILITÀ già in archivio. Nessun risultato inventato.</p>
+      <p>Analisi generate solo sui DATI / STATISTICHE / PROBABILITÀ già in archivio. Il risultato previsto è stima AI, non un DATO.</p>
       <button type="button" onClick={generate} disabled={busy}>
         {busy ? 'Generazione…' : 'Genera report in sospeso'}
       </button>
@@ -78,6 +81,12 @@ export default function Page() {
               {report.match?.away ?? report.match?.awayTeam?.name ?? ''}
             </h3>
             <p>{report.content?.analysis ?? report.type}</p>
+            {report.content?.predictedResult ? (
+              <p>
+                Stima AI: {report.content.predictedResult.scoreHome}–{report.content.predictedResult.scoreAway} (
+                {report.content.predictedResult.outcome})
+              </p>
+            ) : null}
             <small>{new Date(report.createdAt).toLocaleString('it-IT')}</small>
           </div>
         ))

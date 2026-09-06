@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { apiV1, apiGet } from '../lib/api';
+import { asAgenda } from '../lib/agenda';
+import { MatchAgenda } from '../components/match-agenda';
 
 type FootballOverview = {
   counts?: { competitions: number; teams: number; matches: number };
@@ -22,8 +24,16 @@ async function getFootball() {
   }
 }
 
+async function getMatches() {
+  try {
+    return asAgenda(await apiGet('/matches'));
+  } catch {
+    return { recent: [], upcoming: [] };
+  }
+}
+
 export default async function Home() {
-  const [health, football] = await Promise.all([getHealth(), getFootball()]);
+  const [health, football, agenda] = await Promise.all([getHealth(), getFootball(), getMatches()]);
   const live = health.status === 'ok';
 
   return (
@@ -89,6 +99,9 @@ export default async function Home() {
           <p>L’intelligenza commenta solo ciò che è già nel database. Mai un risultato fantasma.</p>
         </Link>
       </div>
+
+      <h2>Ultime e prossime</h2>
+      <MatchAgenda recent={agenda.recent} upcoming={agenda.upcoming} />
 
       <h2>Sport</h2>
       <div className="grid">

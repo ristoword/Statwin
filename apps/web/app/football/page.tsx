@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
 import { EmptyState } from '../../components/empty-state';
-import { MatchCard } from '../../components/match-card';
+import { MatchAgenda } from '../../components/match-agenda';
 import { PageHero } from '../../components/page-hero';
+import { asAgenda, type AgendaMatch } from '../../lib/agenda';
 
 type FootballOverview = {
   sport?: { name: string };
@@ -16,15 +17,6 @@ type Competition = {
   country?: string | null;
 };
 
-type Match = {
-  id: string;
-  kickoff: string;
-  status: string;
-  homeScore: number | null;
-  awayScore: number | null;
-  homeTeam?: { name: string };
-  awayTeam?: { name: string };
-};
 
 type Standing = {
   position: number;
@@ -58,14 +50,14 @@ async function load(competitionId?: string) {
       competitionId ?? competitions.find((item) => item.name.startsWith('Serie A'))?.id ?? competitions[0]?.id;
     const query = selectedId ? `?competitionId=${selectedId}` : '';
     const [matches, standings] = await Promise.all([
-      apiGet<Match[]>(`/football/matches${query}`),
+      apiGet<unknown>(`/football/matches${query}`),
       apiGet<Standing[]>(`/football/standings${query}`),
     ]);
     return {
       overview,
       competitions,
       selectedId,
-      matches: Array.isArray(matches) ? matches : [],
+      matches: asAgenda(matches),
       standings: Array.isArray(standings) ? standings : [],
     };
   } catch {
@@ -73,7 +65,7 @@ async function load(competitionId?: string) {
       overview: { note: 'API non raggiungibile o database non ancora avviato.', counts: { competitions: 0, teams: 0, matches: 0 } },
       competitions: [],
       selectedId: undefined,
-      matches: [],
+      matches: { recent: [] as AgendaMatch[], upcoming: [] as AgendaMatch[] },
       standings: [],
     };
   }
@@ -165,28 +157,7 @@ export default async function FootballPage({
         </div>
       )}
 
-      <h2>Partite</h2>
-      {matches.length === 0 ? (
-        <div className="card">
-          <EmptyState
-            title="Calendario vuoto"
-            body="Nessuna partita sincronizzata per questo campionato. I risultati appariranno solo dalla fonte."
-          />
-        </div>
-      ) : (
-        matches.map((match) => (
-          <MatchCard
-            key={match.id}
-            href={`/matches/${match.id}`}
-            home={match.homeTeam?.name}
-            away={match.awayTeam?.name}
-            homeScore={match.homeScore}
-            awayScore={match.awayScore}
-            status={match.status}
-            lines={[new Date(match.kickoff).toLocaleString('it-IT')]}
-          />
-        ))
-      )}
+      <MatchAgenda recent={matches.recent} upcoming={matches.upcoming} />
     </>
   );
 }

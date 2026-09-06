@@ -1,7 +1,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MATCH_ANALYSIS_SYSTEM_PROMPT } from '../prompts/match-analysis.prompt';
-import { AIContext, AIProvider, AIReportResult } from './ai-provider';
+import { AIContext, AIPredictedResult, AIProvider, AIReportResult } from './ai-provider';
 
 const DISCLAIMER =
   'Analisi AI basata solo sui DATI, STATISTICHE e PROBABILITÀ già in archivio. Non inventa informazioni. Non è una previsione certa né un consiglio di scommessa. 18+.';
@@ -42,6 +42,7 @@ export class OpenAIProvider implements AIProvider {
         favorable: [],
         unfavorable: [],
         missingData: ['OPENAI_API_KEY'],
+        predictedResult: null,
         usedSources,
         disclaimer: DISCLAIMER,
         provider: 'openai',
@@ -56,6 +57,7 @@ export class OpenAIProvider implements AIProvider {
         favorable: [],
         unfavorable: [],
         missingData: ['context'],
+        predictedResult: null,
         usedSources,
         disclaimer: DISCLAIMER,
         provider: 'openai',
@@ -105,6 +107,7 @@ export class OpenAIProvider implements AIProvider {
         favorable: parsed.favorable,
         unfavorable: parsed.unfavorable,
         missingData: parsed.missingData,
+        predictedResult: parsed.predictedResult,
         usedSources,
         disclaimer: DISCLAIMER,
         provider: 'openai',
@@ -134,6 +137,7 @@ function parseModelJson(content: string): {
   favorable: string[];
   unfavorable: string[];
   missingData: string[];
+  predictedResult: AIPredictedResult | null;
 } {
   const stripped = content.replace(/```json|```/g, '').trim();
   try {
@@ -143,10 +147,52 @@ function parseModelJson(content: string): {
       favorable: asStringArray(json.favorable),
       unfavorable: asStringArray(json.unfavorable),
       missingData: asStringArray(json.missingData),
+      predictedResult: parsePredictedResult(json.predictedResult),
     };
   } catch {
-    return { analysis: stripped || 'Risposta AI non interpretabile.', favorable: [], unfavorable: [], missingData: [] };
+    return {
+      analysis: stripped || 'Risposta AI non interpretabile.',
+      favorable: [],
+      unfavorable: [],
+      missingData: [],
+      predictedResult: null,
+    };
   }
+}
+
+function parsePredictedResult(value: unknown): AIPredictedResult | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  const scoreHome = asScore(row.scoreHome);
+  const scoreAway = asScore(row.scoreAway);
+  if (scoreHome == null || scoreAway == null) return null;
+  const rawOutcome = row.outcome;
+  const outcome =
+    rawOutcome === 'HOME' || rawOutcome === 'DRAW' || rawOutcome === 'AWAY'
+      ? rawOutcome
+      : scoreHome > scoreAway
+        ? 'HOME'
+        : scoreHome < scoreAway
+          ? 'AWAY'
+          : 'DRAW';
+  const confidence =
+    row.confidence === 'low' || row.confidence === 'medium' || row.confidence === 'high'
+      ? row.confidence
+      : 'low';
+  return {
+    outcome,
+    scoreHome,
+    scoreAway,
+    confidence,
+    rationale: typeof row.rationale === 'string' && row.rationale.trim() ? row.rationale.trim().slice(0, 400) : null,
+  };
+}
+
+function asScore(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const score = Math.round(value);
+  if (score < 0 || score > 6) return null;
+  return score;
 }
 
 function asStringArray(value: unknown): string[] {

@@ -20,7 +20,7 @@ export class AiEngineService {
       layer: 'AI_ANALYSIS',
       configured: this.provider.configured,
       provider: 'openai',
-      note: 'L’AI analizza solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Non inventa risultati.',
+      note: 'L’AI analizza solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Un risultato previsto è ANALISI AI, mai un DATO ufficiale.',
     };
   }
 
@@ -134,6 +134,7 @@ export class AiEngineService {
           favorable: result.favorable,
           unfavorable: result.unfavorable,
           missingData: result.missingData ?? [],
+          predictedResult: result.predictedResult ?? null,
           disclaimer: result.disclaimer,
           model: result.model,
           provider: result.provider,

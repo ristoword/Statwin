@@ -11,6 +11,7 @@ export type MatchLayers = {
   data: Record<string, unknown>;
   statistics: Record<string, unknown> | null;
   probabilities: Record<string, unknown> | null;
+  odds: Record<string, unknown> | null;
   aiAnalysis: unknown;
 };
 
@@ -58,6 +59,7 @@ export class MatchContextBuilder {
       data,
       statistics,
       probabilities,
+      odds: this.oddsLayer(match),
       aiAnalysis: match.aiReports[0]
         ? { layer: 'AI_ANALYSIS', ...toPublicReport(match.aiReports[0]) }
         : null,
@@ -124,6 +126,21 @@ export class MatchContextBuilder {
     };
   }
 
+  private oddsLayer(match: Awaited<ReturnType<MatchContextBuilder['requireMatch']>>) {
+    if (match.odds.length === 0) return null;
+    return {
+      layer: 'DATA',
+      disclaimer: 'Quote archiviate dal provider. Non sono inventate e non sono un consiglio di scommessa.',
+      items: match.odds.map((odd) => ({
+        bookmaker: odd.bookmaker?.name ?? 'n/d',
+        market: odd.market?.name ?? odd.market?.slug ?? 'n/d',
+        selection: odd.selection,
+        price: odd.price,
+        capturedAt: odd.capturedAt,
+      })),
+    };
+  }
+
   private statisticsLayer(extras: Extras): Record<string, unknown> | null {
     const payload: Record<string, unknown> = { layer: 'STATISTICS' };
     if (extras.standings) payload.standings = extras.standings;
@@ -139,7 +156,7 @@ export class MatchContextBuilder {
     extras: Extras,
   ): Record<string, unknown> | null {
     if (match.predictions.length > 0) {
-      return {
+      const stored: Record<string, unknown> = {
         layer: 'PROBABILITY',
         source: 'stored',
         items: match.predictions.map((item) => ({
@@ -149,6 +166,16 @@ export class MatchContextBuilder {
           disclaimer: item.disclaimer,
         })),
       };
+      if (extras.computedProbability?.predictedScore) {
+        stored.predictedScore = extras.computedProbability.predictedScore;
+      }
+      if (extras.computedProbability?.overUnder) stored.overUnder = extras.computedProbability.overUnder;
+      if (extras.computedProbability?.btts) stored.btts = extras.computedProbability.btts;
+      if (extras.computedProbability?.impliedOddsDisclaimer) {
+        stored.impliedOddsDisclaimer = extras.computedProbability.impliedOddsDisclaimer;
+      }
+      if (extras.computedProbability?.outcomes) stored.modelOutcomes = extras.computedProbability.outcomes;
+      return stored;
     }
     if (extras.computedProbability) {
       return { layer: 'PROBABILITY', source: 'model', ...extras.computedProbability };
@@ -310,7 +337,14 @@ type Extras = {
   headToHead?: unknown;
   homeAway?: unknown;
   teamStats?: unknown;
-  computedProbability?: unknown;
+  computedProbability?: {
+    predictedScore?: unknown;
+    overUnder?: unknown;
+    btts?: unknown;
+    outcomes?: unknown;
+    impliedOddsDisclaimer?: unknown;
+    [key: string]: unknown;
+  };
 };
 
 export function toPublicReport(report: { id: string; type: string; content: unknown; sources: unknown; createdAt: Date }) {

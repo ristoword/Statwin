@@ -15,12 +15,21 @@ export type AIContext = {
   [key: string]: unknown;
 };
 
+export type AIPredictedResult = {
+  outcome: 'HOME' | 'DRAW' | 'AWAY';
+  scoreHome: number;
+  scoreAway: number;
+  confidence: 'low' | 'medium' | 'high';
+  rationale: string | null;
+};
+
 export type AIReportResult = {
   type: string;
   analysis: string;
   favorable: string[];
   unfavorable: string[];
   missingData?: string[];
+  predictedResult?: AIPredictedResult | null;
   usedSources: string[];
   disclaimer: string;
   model?: string;

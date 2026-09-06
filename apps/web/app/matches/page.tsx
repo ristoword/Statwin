@@ -1,57 +1,23 @@
 import { apiGet } from '../../lib/api';
-import { EmptyState } from '../../components/empty-state';
-import { MatchCard } from '../../components/match-card';
+import { asAgenda } from '../../lib/agenda';
+import { MatchAgenda } from '../../components/match-agenda';
 import { PageHero } from '../../components/page-hero';
 
-type Match = {
-  id: string;
-  kickoff?: string;
-  status?: string;
-  homeScore?: number | null;
-  awayScore?: number | null;
-  homeTeam?: { name: string };
-  awayTeam?: { name: string };
-  competition?: { name: string };
-};
-
 export default async function MatchesPage() {
-  let list: Match[] = [];
+  let payload: unknown = { recent: [], upcoming: [] };
   try {
-    const matches = await apiGet<Match[]>('/matches');
-    list = Array.isArray(matches) ? matches : [];
+    payload = await apiGet('/matches');
   } catch {
-    list = [];
+    payload = { recent: [], upcoming: [] };
   }
+  const { recent, upcoming } = asAgenda(payload);
 
   return (
     <>
       <PageHero kicker="Calendario" title="Partite">
-        <p>Ogni scheda apre i quattro livelli: DATI, STATISTICHE, PROBABILITÀ e ANALISI AI.</p>
+        <p>Ultime e prossime gare. I punteggi ufficiali sono DATI. Le stime restano PROBABILITÀ.</p>
       </PageHero>
-      {list.length === 0 ? (
-        <div className="card">
-          <EmptyState
-            title="Nessuna partita in archivio"
-            body="Quando il provider sincronizza un incontro, la scheda compare qui. Nessun risultato viene simulato."
-          />
-        </div>
-      ) : (
-        list.map((match) => (
-          <MatchCard
-            key={match.id}
-            href={`/matches/${match.id}`}
-            home={match.homeTeam?.name}
-            away={match.awayTeam?.name}
-            homeScore={match.homeScore}
-            awayScore={match.awayScore}
-            status={match.status}
-            lines={[
-              match.competition?.name ?? 'Calcio',
-              match.kickoff ? new Date(match.kickoff).toLocaleString('it-IT') : '',
-            ].filter(Boolean)}
-          />
-        ))
-      )}
+      <MatchAgenda recent={recent} upcoming={upcoming} />
     </>
   );
 }

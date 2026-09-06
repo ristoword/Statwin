@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
 
 @Injectable()
 export class FootballService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly predictions: PredictionEngineService,
+  ) {}
 
   async overview() {
     const sport = await this.prisma.sport.findUnique({ where: { slug: 'football' } });
@@ -40,7 +44,11 @@ export class FootballService {
         take: 20,
       }),
     ]);
-    return [...recent, ...upcoming];
+    const estimates = await this.estimatesFor([...recent, ...upcoming]);
+    return {
+      recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
+      upcoming: upcoming.map((match) => this.withEstimate(match, estimates.get(match.id))),
+    };
   }
 
   matchById(id: string) {
@@ -88,5 +96,45 @@ export class FootballService {
       include: { team: true, season: { include: { competition: true } } },
       orderBy: { position: 'asc' },
     });
+  }
+
+  private async estimatesFor(matches: Array<{ id: string; homeTeamId: string; awayTeamId: string; seasonId: string | null }>) {
+    const result = new Map<string, ReturnType<PredictionEngineService['estimate']>>();
+    const seasonIds = [...new Set(matches.map((item) => item.seasonId).filter((id): id is string => Boolean(id)))];
+    if (seasonIds.length === 0) return result;
+    const standings = await this.prisma.standing.findMany({
+      where: { seasonId: { in: seasonIds } },
+    });
+    const byKey = new Map(standings.map((row) => [`${row.seasonId}:${row.teamId}`, row]));
+    for (const match of matches) {
+      if (!match.seasonId) continue;
+      const home = byKey.get(`${match.seasonId}:${match.homeTeamId}`);
+      const away = byKey.get(`${match.seasonId}:${match.awayTeamId}`);
+      if (!home || !away || home.played === 0 || away.played === 0) continue;
+      result.set(
+        match.id,
+        this.predictions.estimate({
+          homeStrength: home.points / (home.played * 3),
+          awayStrength: away.points / (away.played * 3),
+        }),
+      );
+    }
+    return result;
+  }
+
+  private withEstimate<T extends { id: string }>(match: T, estimate?: ReturnType<PredictionEngineService['estimate']>) {
+    return {
+      ...match,
+      estimate: estimate
+        ? {
+            layer: 'PROBABILITY',
+            predictedScore: estimate.predictedScore,
+            outcomes: estimate.outcomes,
+            overUnder: estimate.overUnder,
+            btts: estimate.btts,
+            impliedOddsDisclaimer: estimate.impliedOddsDisclaimer,
+          }
+        : null,
+    };
   }
 }

@@ -7,6 +7,7 @@ export function MatchCard({
   homeScore,
   awayScore,
   status,
+  estimate,
   lines = [],
 }: {
   href: string;
@@ -15,8 +16,10 @@ export function MatchCard({
   homeScore?: number | null;
   awayScore?: number | null;
   status?: string;
+  estimate?: { home?: number; away?: number } | null;
   lines?: string[];
 }) {
+  const official = homeScore != null && awayScore != null;
   return (
     <Link href={href} className="match-card">
       <div className="match-card-top">
@@ -25,13 +28,16 @@ export function MatchCard({
       </div>
       <div className="match">
         <div className="match-team">{home ?? 'Casa'}</div>
-        <div className="scoreboard">
-          <b>{homeScore ?? '–'}</b>
+        <div className={`scoreboard${official ? '' : ' estimated'}`}>
+          <b>{official ? homeScore : '–'}</b>
           <span>:</span>
-          <b>{awayScore ?? '–'}</b>
+          <b>{official ? awayScore : '–'}</b>
         </div>
         <div className="match-team right">{away ?? 'Trasferta'}</div>
       </div>
+      {!official && estimate?.home != null && estimate.away != null ? (
+        <p className="estimate-line">Stima modello {estimate.home}–{estimate.away} · non è un DATO</p>
+      ) : null}
       {lines.slice(1).length > 0 ? (
         <div className="match-card-meta">
           {lines.slice(1).map((line) => (

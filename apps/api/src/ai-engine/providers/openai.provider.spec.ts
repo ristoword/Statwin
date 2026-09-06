@@ -25,5 +25,6 @@ describe('OpenAIProvider', () => {
     const result = await provider.analyzeMatch({});
     expect(result.analysis).toContain('non inventa');
     expect(result.usedSources).toEqual([]);
+    expect(result.predictedResult).toBeNull();
   });
 });

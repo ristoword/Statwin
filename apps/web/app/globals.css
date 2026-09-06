@@ -423,6 +423,51 @@ label input { width: auto; margin: 0; }
     linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
 }
 .coming { opacity: 0.78; }
+.predicted {
+  margin-top: 18px;
+  padding: 18px 16px 14px;
+  border-radius: 16px;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.22);
+}
+.predicted.prob { border-color: rgba(232, 200, 114, 0.28); }
+.predicted.ai { border-color: rgba(201, 166, 255, 0.3); }
+.predicted .scoreboard { margin: 10px auto 8px; }
+.predicted-sides { letter-spacing: 0.04em; }
+.predicted-sides span { color: var(--muted); margin: 0 8px; }
+.estimate-line {
+  margin: 8px 0 0;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.scoreboard.estimated { opacity: 0.55; }
+.agenda h2 { margin-top: 8px; }
+.markets { margin-top: 18px; display: grid; gap: 16px; }
+.market-title {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+.quote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.quote-chip {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.22);
+  display: grid;
+  gap: 4px;
+}
+.quote-chip span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.quote-chip strong { font-size: 15px; }
+.quote-chip em { color: var(--gold); font-style: normal; font-weight: 800; }
 .coming-panel { min-height: 280px; display: grid; place-items: center; }
 
 .pipeline { position: relative; }

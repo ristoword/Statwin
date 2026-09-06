@@ -3,12 +3,22 @@ import { apiGet } from '../../lib/api';
 import { EmptyState } from '../../components/empty-state';
 import { GenerateAiButton } from '../../components/generate-ai-button';
 import { PageHero } from '../../components/page-hero';
+import { PredictedResult } from '../../components/predicted-result';
 
 type ReportList = {
   items?: Array<{
     id: string;
     createdAt: string;
-    content?: { analysis?: string };
+    content?: {
+      analysis?: string;
+      predictedResult?: {
+        outcome?: string;
+        scoreHome?: number;
+        scoreAway?: number;
+        confidence?: string;
+        rationale?: string | null;
+      } | null;
+    };
     match?: { id: string; home: string; away: string; competition?: string | null; kickoff?: string };
   }>;
 };
@@ -31,8 +41,8 @@ export default async function AiAnalysisPage() {
     reports = [];
   }
   try {
-    const list = await apiGet<Match[]>('/matches');
-    matches = Array.isArray(list) ? list : [];
+    const list = await apiGet<Match[] | { recent?: Match[]; upcoming?: Match[] }>('/matches');
+    matches = Array.isArray(list) ? list : [...(list.upcoming ?? []), ...(list.recent ?? [])];
   } catch {
     matches = [];
   }
@@ -41,8 +51,8 @@ export default async function AiAnalysisPage() {
     <>
       <PageHero kicker="GPT-4o" title="Analisi AI">
         <p className="disclaimer">
-          L’AI legge solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Non inventa risultati e non promette vincite.
-          18+.
+          L’AI legge solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Il risultato previsto è una stima di ANALISI
+          AI, non un DATO ufficiale. 18+. Nessuna vincita promessa.
         </p>
       </PageHero>
 
@@ -65,6 +75,23 @@ export default async function AiAnalysisPage() {
                 </Link>
               </h3>
               <p>{report.content?.analysis ?? 'Sintesi non disponibile.'}</p>
+              <PredictedResult
+                variant="ai"
+                title="Risultato previsto · AI"
+                home={report.match?.home}
+                away={report.match?.away}
+                prediction={
+                  report.content?.predictedResult
+                    ? {
+                        home: report.content.predictedResult.scoreHome,
+                        away: report.content.predictedResult.scoreAway,
+                        outcome: report.content.predictedResult.outcome,
+                        confidence: report.content.predictedResult.confidence,
+                        rationale: report.content.predictedResult.rationale,
+                      }
+                    : null
+                }
+              />
               <p className="muted">{new Date(report.createdAt).toLocaleString('it-IT')}</p>
             </div>
           ))}

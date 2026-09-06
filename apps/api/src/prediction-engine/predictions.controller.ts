@@ -44,10 +44,12 @@ export class PredictionsController {
           probability: item.probability,
           disclaimer: item.disclaimer,
         }));
-        const computed =
-          stored.length === 0 ? await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId) : null;
+        const computed = await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId);
         const report = match.aiReports[0];
-        const content = report?.content as { analysis?: string } | null;
+        const content = report?.content as {
+          analysis?: string;
+          predictedResult?: { outcome?: string; scoreHome?: number; scoreAway?: number; confidence?: string; rationale?: string } | null;
+        } | null;
         return {
           matchId: match.id,
           kickoff: match.kickoff,
@@ -55,12 +57,24 @@ export class PredictionsController {
           competition: match.competition?.name ?? null,
           home: match.homeTeam.name,
           away: match.awayTeam.name,
-          probabilities: stored.length > 0 ? { layer: 'PROBABILITY', source: 'stored', items: stored } : computed,
+          probabilities:
+            stored.length > 0
+              ? {
+                  layer: 'PROBABILITY',
+                  source: 'stored',
+                  items: stored,
+                  predictedScore: computed?.predictedScore ?? null,
+                  overUnder: computed?.overUnder ?? null,
+                  btts: computed?.btts ?? null,
+                  impliedOddsDisclaimer: computed?.impliedOddsDisclaimer ?? null,
+                }
+              : computed,
           aiCommentary: report
             ? {
                 layer: 'AI_ANALYSIS',
                 id: report.id,
                 excerpt: content?.analysis?.slice(0, 280) ?? null,
+                predictedResult: content?.predictedResult ?? null,
                 createdAt: report.createdAt,
               }
             : null,
@@ -68,10 +82,14 @@ export class PredictionsController {
       }),
     );
 
+    const now = Date.now();
     return {
       layer: 'PROBABILITY',
-      disclaimer: 'Stime modellistiche, non certezze. Non costituiscono consiglio di scommessa. 18+.',
+      disclaimer:
+        'Stime modellistiche, non certezze. Le quote sono implicite del modello, non di un bookmaker. 18+.',
       items,
+      recent: items.filter((item) => new Date(item.kickoff).getTime() < now),
+      upcoming: items.filter((item) => new Date(item.kickoff).getTime() >= now),
     };
   }
 
@@ -96,17 +114,32 @@ export class PredictionsController {
       probability: item.probability,
       disclaimer: item.disclaimer,
     }));
-    const computed =
-      stored.length === 0 ? await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId) : null;
+    const computed = await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId);
     const report = match.aiReports[0];
-    const content = report?.content as { analysis?: string; favorable?: string[]; unfavorable?: string[] } | null;
+    const content = report?.content as {
+      analysis?: string;
+      favorable?: string[];
+      unfavorable?: string[];
+      predictedResult?: { outcome?: string; scoreHome?: number; scoreAway?: number; confidence?: string; rationale?: string } | null;
+    } | null;
     return {
       layer: 'PROBABILITY',
       matchId: match.id,
       home: match.homeTeam.name,
       away: match.awayTeam.name,
       competition: match.competition?.name ?? null,
-      probabilities: stored.length > 0 ? { layer: 'PROBABILITY', source: 'stored', items: stored } : computed,
+      probabilities:
+        stored.length > 0
+          ? {
+              layer: 'PROBABILITY',
+              source: 'stored',
+              items: stored,
+              predictedScore: computed?.predictedScore ?? null,
+              overUnder: computed?.overUnder ?? null,
+              btts: computed?.btts ?? null,
+              impliedOddsDisclaimer: computed?.impliedOddsDisclaimer ?? null,
+            }
+          : computed,
       aiCommentary: report
         ? {
             layer: 'AI_ANALYSIS',
@@ -114,6 +147,7 @@ export class PredictionsController {
             analysis: content?.analysis ?? null,
             favorable: content?.favorable ?? [],
             unfavorable: content?.unfavorable ?? [],
+            predictedResult: content?.predictedResult ?? null,
             createdAt: report.createdAt,
           }
         : null,
