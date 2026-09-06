@@ -50,6 +50,7 @@ export class BasketballService {
     return {
       recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
       upcoming: upcoming.map((match) => this.withEstimate(match, estimates.get(match.id))),
+      access: { probabilities: includeEstimates },
     };
   }
 

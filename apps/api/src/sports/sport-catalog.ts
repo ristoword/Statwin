@@ -18,8 +18,8 @@ export const SPORT_CATALOG: SportDefinition[] = [
     href: '/football',
     apiPath: 'football',
     status: 'synced',
-    focus: 'Italia · Europa',
-    blurb: 'Campionati e partite solo se il provider ha restituito il risultato. Nessun punteggio inventato.',
+    focus: 'Italia · nazione per nazione',
+    blurb: 'Italia prima, poi tutte le altre nazioni in archivio e le coppe UEFA. Punteggi solo se il provider ha chiuso la gara.',
     eventNoun: 'partite',
   },
   {

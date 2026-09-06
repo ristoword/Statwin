@@ -37,3 +37,19 @@ export function asAgenda(payload: unknown): { recent: AgendaMatch[]; upcoming: A
     upcoming: list.filter((item) => !item.kickoff || new Date(item.kickoff).getTime() >= now),
   };
 }
+
+export function asMatchDesk(payload: unknown): {
+  recent: AgendaMatch[];
+  upcoming: AgendaMatch[];
+  probabilitiesLocked: boolean;
+} {
+  const agenda = asAgenda(payload);
+  const access =
+    payload && typeof payload === 'object' && !Array.isArray(payload) && 'access' in payload
+      ? (payload as { access?: { probabilities?: boolean } }).access
+      : undefined;
+  return {
+    ...agenda,
+    probabilitiesLocked: access ? !access.probabilities : false,
+  };
+}

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
+import { toCompetitionDto } from '../competition-dto';
 
 @Injectable()
 export class FootballService {
@@ -50,6 +51,7 @@ export class FootballService {
     return {
       recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
       upcoming: upcoming.map((match) => this.withEstimate(match, estimates.get(match.id))),
+      access: { probabilities: includeEstimates },
     };
   }
 
@@ -78,11 +80,13 @@ export class FootballService {
     });
   }
 
-  competitions() {
-    return this.prisma.competition.findMany({
+  async competitions() {
+    const rows = await this.prisma.competition.findMany({
       where: { sport: { slug: 'football' } },
       include: { seasons: true, leagues: true },
+      orderBy: [{ country: 'asc' }, { name: 'asc' }],
     });
+    return rows.map((row) => ({ ...row, ...toCompetitionDto(row) }));
   }
 
   standings(competitionId?: string) {

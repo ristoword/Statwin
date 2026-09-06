@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
 import { EMPTY_SPORTS, findWiredSport } from '../../data-providers/thesportsdb/wired-sports';
 import { findSport } from '../sport-catalog';
+import { toCompetitionDto } from '../competition-dto';
 
 @Injectable()
 export class SportDeskService {
@@ -41,12 +42,13 @@ export class SportDeskService {
     };
   }
 
-  competitions(slug: string) {
-    return this.prisma.competition.findMany({
+  async competitions(slug: string) {
+    const rows = await this.prisma.competition.findMany({
       where: { sport: { slug } },
       include: { seasons: true, leagues: true },
-      orderBy: { name: 'asc' },
+      orderBy: [{ country: 'asc' }, { name: 'asc' }],
     });
+    return rows.map((row) => ({ ...row, ...toCompetitionDto(row) }));
   }
 
   async events(slug: string) {
@@ -80,6 +82,7 @@ export class SportDeskService {
     return {
       recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
       upcoming: upcoming.map((match) => this.withEstimate(match, estimates.get(match.id))),
+      access: { probabilities: includeEstimates },
     };
   }
 

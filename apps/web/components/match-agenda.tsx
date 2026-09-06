@@ -38,7 +38,7 @@ export function MatchAgenda({
               homeScore={match.homeScore}
               awayScore={match.awayScore}
               status={match.status}
-              estimate={match.estimate?.predictedScore}
+              estimate={match.estimate}
               lines={[
                 match.competition?.name ?? match.sport?.name ?? 'Evento',
                 match.kickoff ? new Date(match.kickoff).toLocaleString('it-IT') : '',
@@ -63,13 +63,10 @@ export function MatchAgenda({
               homeScore={match.homeScore}
               awayScore={match.awayScore}
               status={match.status}
-              estimate={match.estimate?.predictedScore}
+              estimate={match.estimate}
               lines={[
                 match.competition?.name ?? match.sport?.name ?? 'Evento',
                 match.kickoff ? new Date(match.kickoff).toLocaleString('it-IT') : '',
-                match.estimate?.predictedScore
-                  ? `Stima modello ${match.estimate.predictedScore.home}–${match.estimate.predictedScore.away}`
-                  : '',
               ].filter(Boolean)}
             />
           ))
