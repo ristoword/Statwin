@@ -48,6 +48,45 @@ Stack Docker completo:
 docker compose --profile full up --build
 ```
 
+## Deploy su Railway
+
+Il servizio pubblico è pensato per **https://statwin-production.up.railway.app**. Un solo servizio avvia web (porta `$PORT`) e API interna (`127.0.0.1:3001`). Il frontend proxya `/api` e `/docs` verso l'API.
+
+### 1. Plugin nel progetto Railway
+
+- **Postgres**
+- **Redis**
+
+### 2. Servizio dal repo `ristoword/Statwin`
+
+Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.railway.app`.
+
+### 3. Variabili del servizio
+
+| Variabile | Valore |
+|---|---|
+| `NODE_ENV` | `production` |
+| `JWT_SECRET` | stringa lunga casuale |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` |
+| `REDIS_PRIVATE_URL` | `${{Redis.REDIS_PRIVATE_URL}}` |
+| `FRONTEND_URL` | `https://statwin-production.up.railway.app` |
+| `ADMIN_URL` | `https://statwin-production.up.railway.app` |
+| `API_INTERNAL_URL` | `http://127.0.0.1:3001` |
+| `SEED_ON_BOOT` | `true` al primo deploy, poi `false` |
+| `FOOTBALL_DATA_PROVIDER` | `openligadb` |
+| `OPENLIGADB_BASE_URL` | `https://api.openligadb.de` |
+| `OPENLIGADB_SEASON` | `2026` |
+| `OPENLIGADB_LEAGUES` | `bl1` |
+
+Dopo il primo boot (seed admin `admin@statwin.local` / `ChangeMeAdmin1!`) sincronizza i dati calcio:
+
+```bash
+curl -X POST https://statwin-production.up.railway.app/api/v1/football/sync
+```
+
+Cambia subito la password admin. Non committare `.env`.
+
 ## API versionate
 
 Prefisso: `/api/v1`

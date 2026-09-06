@@ -21,7 +21,10 @@ import { AiReportsProcessor } from './ai-reports/ai-reports.processor';
         connection: {
           host: config.get<string>('redis.host'),
           port: config.get<number>('redis.port'),
-          password: config.get<string>('redis.password'),
+          username: config.get<string>('redis.username'),
+          password: config.get<string>('redis.password') || undefined,
+          tls: config.get('redis.tls'),
+          maxRetriesPerRequest: null,
         },
       }),
     }),

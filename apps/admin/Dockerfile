@@ -17,15 +17,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build --workspace=@statwin/web
+RUN npm run build --workspace=@statwin/admin
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
-COPY --from=build /app/apps/web/.next/standalone ./
-COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=build /app/apps/web/public ./apps/web/public
-EXPOSE 3000
-CMD ["node", "apps/web/server.js"]
+COPY --from=build /app/apps/admin/.next/standalone ./
+COPY --from=build /app/apps/admin/.next/static ./apps/admin/.next/static
+COPY --from=build /app/apps/admin/public ./apps/admin/public
+EXPOSE 3002
+CMD ["node", "apps/admin/server.js"]

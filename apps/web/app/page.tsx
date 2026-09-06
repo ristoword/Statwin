@@ -1,10 +1,9 @@
 import Link from 'next/link';
-
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { apiV1 } from '../lib/api';
 
 async function getHealth() {
   try {
-    const res = await fetch(`${API}/api/v1/health`, { cache: 'no-store' });
+    const res = await fetch(`${apiV1()}/health`, { cache: 'no-store' });
     return res.json();
   } catch {
     return { status: 'offline' };
@@ -22,7 +21,7 @@ export default async function Home() {
       </p>
       <div className="card">
         <span className="badge">API {health.status ?? 'unknown'}</span>
-        <p>Swagger: {API}/docs</p>
+        <p>Swagger: <a href="/docs">/docs</a></p>
       </div>
       <div className="grid">
         <Link className="card" href="/football">Calcio — attivo</Link>

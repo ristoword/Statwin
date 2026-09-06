@@ -12,7 +12,7 @@
     "dev:api": "turbo run dev --filter=@statwin/api",
     "dev:web": "turbo run dev --filter=@statwin/web",
     "dev:admin": "turbo run dev --filter=@statwin/admin",
-    "build": "turbo run build",
+    "build": "prisma generate --schema=prisma/schema.prisma && turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -21,7 +21,13 @@
     "db:push": "prisma db push --schema=prisma/schema.prisma",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio --schema=prisma/schema.prisma",
-    "db:up": "node scripts/start-pg.mjs"
+    "db:up": "node scripts/start-pg.mjs",
+    "start": "node scripts/start-production.mjs",
+    "start:api": "node scripts/start-api.mjs"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma",
+    "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
     "embedded-postgres": "^18.4.0-beta.17",

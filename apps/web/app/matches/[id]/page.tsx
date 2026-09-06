@@ -1,8 +1,8 @@
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+import { apiV1 } from '../../../lib/api';
 
 async function getMatch(id: string) {
   try {
-    const res = await fetch(`${API}/api/v1/matches/${id}`, { cache: 'no-store' });
+    const res = await fetch(`${apiV1()}/matches/${id}`, { cache: 'no-store' });
     if (!res.ok) return null;
     return res.json();
   } catch {
