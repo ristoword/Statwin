@@ -10,6 +10,8 @@ export type TsdEvent = {
   idEvent: string;
   strEvent?: string;
   strEventAlternate?: string;
+  idLeague?: string;
+  strLeague?: string;
   idHomeTeam?: string;
   idAwayTeam?: string;
   strHomeTeam?: string;
@@ -21,6 +23,11 @@ export type TsdEvent = {
   strTimestamp?: string;
   strStatus?: string;
   strVenue?: string;
+};
+
+/** Official TheSportsDB team ids used only as extra lookup keys, never as fake fixtures. */
+export const TSD_FOCUS_TEAM_IDS: Record<string, string[]> = {
+  '4332': ['133676', '133610'],
 };
 
 export type TsdTableRow = {
@@ -195,14 +202,26 @@ function addTsdEvents(target: Map<string, TsdEvent>, events?: TsdEvent[] | null)
   }
 }
 
+export function tsdFocusDays(from = new Date()): string[] {
+  const start = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
+  return [0, 1].map((offset) => new Date(start + offset * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+}
+
+export function eventMatchesLeague(event: TsdEvent, leagueId: string): boolean {
+  const id = String(event.idLeague ?? '').trim();
+  if (id) return id === leagueId;
+  return leagueId === '4332' && /serie a/i.test(event.strLeague ?? '');
+}
+
 /**
- * Upcoming league fixtures first, then the first non-empty season archive.
+ * Upcoming league fixtures first, then today/tomorrow, team next events, then season archive.
  * Never invents events: empty provider responses stay empty.
  */
 export async function collectTsdLeagueEvents(
   getJson: TsdGetJson,
   leagueId: string,
   seasons: string[],
+  now = new Date(),
 ): Promise<TsdEvent[]> {
   const byId = new Map<string, TsdEvent>();
 
@@ -212,7 +231,35 @@ export async function collectTsdLeagueEvents(
     );
     addTsdEvents(byId, upcoming.events);
   } catch {
-    /* keep going with the season archive */
+    /* keep going with day / team / season sources */
+  }
+
+  for (const day of tsdFocusDays(now)) {
+    try {
+      const payload = await getJson<{ events?: TsdEvent[] | null }>(
+        `/eventsday.php?d=${encodeURIComponent(day)}&s=Soccer`,
+      );
+      addTsdEvents(
+        byId,
+        (payload.events ?? []).filter((event) => eventMatchesLeague(event, leagueId)),
+      );
+    } catch {
+      /* ignore a missing day feed */
+    }
+  }
+
+  for (const teamId of TSD_FOCUS_TEAM_IDS[leagueId] ?? []) {
+    try {
+      const payload = await getJson<{ events?: TsdEvent[] | null }>(
+        `/eventsnext.php?id=${encodeURIComponent(teamId)}`,
+      );
+      addTsdEvents(
+        byId,
+        (payload.events ?? []).filter((event) => eventMatchesLeague(event, leagueId)),
+      );
+    } catch {
+      /* ignore a missing team feed */
+    }
   }
 
   const seasonsToTry = byId.size > 0 ? seasons.slice(0, 1) : seasons;

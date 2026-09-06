@@ -1,4 +1,4 @@
-import { collectTsdLeagueEvents, tsdSeasonCandidates, type TsdGetJson } from './tsd-client';
+import { collectTsdLeagueEvents, eventMatchesLeague, tsdSeasonCandidates, type TsdGetJson } from './tsd-client';
 
 const juveMilan = {
   idEvent: 'juve-milan-2026-09-06',
@@ -56,6 +56,25 @@ describe('collectTsdLeagueEvents', () => {
 
     expect(seasonsTried).toEqual(['2026-2027']);
     expect(events.map((event) => event.idEvent).sort()).toEqual(['juve-milan-2026-09-06', 'past-1']);
+  });
+
+  it('keeps a same-day Serie A fixture from eventsday when league next is empty', async () => {
+    const today = '2026-09-06';
+    const getJson: TsdGetJson = async (path) => {
+      if (path.startsWith('/eventsday.php') && path.includes(today)) {
+        return {
+          events: [
+            { ...juveMilan, idLeague: '4332', strLeague: 'Italian Serie A' },
+            { idEvent: 'other', idLeague: '4328', strHomeTeam: 'Arsenal', strAwayTeam: 'Chelsea' },
+          ],
+        } as never;
+      }
+      return { events: [] } as never;
+    };
+    const events = await collectTsdLeagueEvents(getJson, '4332', ['2026-2027'], new Date('2026-09-06T16:00:00.000Z'));
+    expect(events.map((event) => event.idEvent)).toEqual(['juve-milan-2026-09-06']);
+    expect(eventMatchesLeague({ idEvent: 'x', idLeague: '4332' }, '4332')).toBe(true);
+    expect(eventMatchesLeague({ idEvent: 'x', idLeague: '4328' }, '4332')).toBe(false);
   });
 
   it('keeps season events when eventsnextleague fails', async () => {

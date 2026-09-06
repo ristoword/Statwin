@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { MatchStatus } from '@prisma/client';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { FOOTBALL_DATA_PROVIDER } from '../../data-providers/data-providers.module';
@@ -12,13 +12,24 @@ import {
 import { persistOfficialStandings } from '../generic/standings';
 
 @Injectable()
-export class FootballSyncService {
+export class FootballSyncService implements OnApplicationBootstrap {
   private readonly logger = new Logger(FootballSyncService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     @Inject(FOOTBALL_DATA_PROVIDER) private readonly provider: FootballDataProvider,
   ) {}
+
+  onApplicationBootstrap() {
+    if (process.env.FOOTBALL_SYNC_ON_BOOT === '0' || process.env.FOOTBALL_SYNC_ON_BOOT === 'false') {
+      return;
+    }
+    void this.syncAll(['4332', 'Serie A']).then((result) => {
+      this.logger.log(
+        `Boot Serie A sync: matches=${result.imported?.matches ?? 0} ${result.note ?? ''}`.trim(),
+      );
+    });
+  }
 
   async syncAll(only?: string[]) {
     try {
@@ -47,7 +58,9 @@ export class FootballSyncService {
       throw new Error(`Provider ${this.provider.slug} non raggiungibile: ${message}`);
     }
     if (!ping.ok) {
-      throw new Error(`Provider ${this.provider.slug} non raggiungibile`);
+      this.logger.warn(
+        `Provider ${this.provider.slug} ping fallito: provo comunque le fonti partite, senza inventare gare.`,
+      );
     }
 
     const sport = await this.prisma.sport.upsert({
