@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet } from '../../lib/api';
+import { apiGet, isUnauthorized } from '../../lib/api';
 import { clearTokens, getAccessToken } from '../../lib/auth-storage';
 import { AccountForm, type AccountProfile } from '../../components/account-form';
 import { SportsGrid } from '../../components/sports-grid';
@@ -20,27 +20,67 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [football, setFootball] = useState<FootballOverview | null>(null);
   const [error, setError] = useState('');
+  const [authed, setAuthed] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   const onAccountProfile = useCallback((data: Profile) => {
     setProfile(data);
+    setAuthed(true);
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const token = getAccessToken();
-    if (token) {
+    setAuthed(Boolean(token));
+
+    if (!token) {
+      setLoadingProfile(false);
+    } else {
       apiGet<Profile>('/users/me', token)
-        .then(setProfile)
-        .catch((err: Error) => setError(err.message));
+        .then((data) => {
+          if (cancelled) return;
+          setProfile({
+            ...data,
+            phone: data.phone ?? null,
+            role: data.role ?? 'USER',
+            subscription: data.subscription ?? null,
+          });
+          setError('');
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          if (isUnauthorized(err)) {
+            clearTokens();
+            setAuthed(false);
+            setProfile(null);
+            setError('');
+            return;
+          }
+          setError(err.message || 'Profilo non disponibile. Il desk resta aperto.');
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingProfile(false);
+        });
     }
+
     apiGet<FootballOverview>('/football')
-      .then(setFootball)
-      .catch(() => setFootball({ note: 'API calcio non disponibile' }));
+      .then((data) => {
+        if (!cancelled) setFootball(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFootball({ note: 'API calcio non disponibile' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const trialLabel = trialUntilLabel(
-    profile?.trialEndsAt ?? profile?.subscription?.trialEndsAt,
+    profile?.trialEndsAt ?? profile?.subscription?.trialEndsAt ?? null,
     profile?.subscription?.plan,
   );
+  const planLabel = profile?.effectivePlan ?? profile?.subscription?.plan ?? 'FREE';
 
   return (
     <>
@@ -61,8 +101,9 @@ export default function DashboardPage() {
                 {profile.firstName || profile.email}
               </h3>
               <p>
-                Piano <strong>{profile.subscription?.plan ?? 'FREE'}</strong>
-                {trialLabel ? ` · ${trialLabel}` : null} · {profile.role}
+                Piano <strong>{planLabel}</strong>
+                {trialLabel ? ` · ${trialLabel}` : null}
+                {profile.role ? ` · ${profile.role}` : null}
               </p>
               {profile.phone ? <p className="muted">Tel. {profile.phone}</p> : null}
               <p>
@@ -81,15 +122,25 @@ export default function DashboardPage() {
                 onClick={() => {
                   clearTokens();
                   setProfile(null);
+                  setAuthed(false);
                 }}
               >
                 Esci
               </button>
             </div>
           </div>
+        ) : loadingProfile ? (
+          <p className="muted">Caricamento profilo...</p>
+        ) : authed ? (
+          <p>
+            Sessione attiva, ma il profilo non è arrivato. Il desk sotto resta disponibile.{' '}
+            <Link className="btn-ghost" href="/login?next=/dashboard">
+              Accedi di nuovo
+            </Link>
+          </p>
         ) : (
           <p>
-            <Link className="btn" href="/login">Accedi</Link> per profilo, piani e report salvati.
+            <Link className="btn" href="/login?next=/dashboard">Accedi</Link> per profilo, piani e report salvati.
           </p>
         )}
       </div>

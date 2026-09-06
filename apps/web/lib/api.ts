@@ -26,12 +26,26 @@ export function apiV1(): string {
 export const API_ORIGIN = getApiOrigin();
 export const API_V1 = apiV1();
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401;
+}
+
 export async function apiGet<T>(path: string, token?: string): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${apiV1()}${path}`, { cache: 'no-store', headers });
   if (!res.ok) {
-    throw new Error(await readError(res));
+    throw new ApiError(await readError(res, path), res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -61,7 +75,7 @@ async function apiWrite<T>(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(await readError(res));
+    throw new ApiError(await readError(res, path), res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -74,25 +88,33 @@ function asErrorText(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
-async function readError(res: Response): Promise<string> {
+async function readError(res: Response, path?: string): Promise<string> {
+  let payloadMessage: string | undefined;
   try {
     const payload = (await res.json()) as {
       message?: unknown;
       error?: unknown;
     };
-    const top = asErrorText(payload.message);
-    if (top) return top;
-    if (payload.error && typeof payload.error === 'object') {
+    payloadMessage = asErrorText(payload.message);
+    if (!payloadMessage && payload.error && typeof payload.error === 'object') {
       const nested = payload.error as { message?: unknown };
-      const inner = asErrorText(nested.message);
-      if (inner) return inner;
+      payloadMessage = asErrorText(nested.message);
     }
-    const rawError = asErrorText(payload.error);
-    if (rawError) return rawError;
+    if (!payloadMessage) {
+      payloadMessage = asErrorText(payload.error);
+    }
   } catch {
     /* ignore */
   }
-  if (res.status === 401) return 'Password attuale non corretta.';
+  if (res.status === 401) {
+    if (path === '/users/me' || path === '/auth/login' || path === '/auth/refresh') {
+      return path === '/auth/login' ? 'Credenziali non valide.' : 'Sessione scaduta. Accedi di nuovo.';
+    }
+    return payloadMessage && !/^unauthorized$/i.test(payloadMessage)
+      ? payloadMessage
+      : 'Password attuale non corretta.';
+  }
+  if (payloadMessage) return payloadMessage;
   if (res.status === 409) return 'Email già in uso.';
   return `Errore API ${res.status}`;
 }

@@ -24,7 +24,11 @@ export function SiteHeader() {
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    setAuthed(Boolean(getAccessToken()));
+    try {
+      setAuthed(Boolean(getAccessToken()));
+    } catch {
+      setAuthed(false);
+    }
     setOpen(false);
   }, [pathname]);
 

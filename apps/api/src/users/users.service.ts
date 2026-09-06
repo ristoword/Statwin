@@ -2,10 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -15,27 +16,48 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { normalizePhone } from './phone';
 import { effectivePlan, trialEndDate } from '../subscriptions/plan-limits';
+import {
+  isSchemaDriftError,
+  SUBSCRIPTION_CORE_SELECT,
+  USER_CORE_SELECT,
+} from './schema-compat';
+
+type UserWithSubscription = Prisma.UserGetPayload<{ include: { subscription: true } }>;
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
 
-  findByEmail(email: string) {
+  async findByEmail(email: string) {
     const normalized = email.trim().toLowerCase();
-    return this.prisma.user.findFirst({
-      where: { email: { equals: normalized, mode: 'insensitive' } },
-      include: { subscription: true },
-    });
+    try {
+      return await this.prisma.user.findFirst({
+        where: { email: { equals: normalized, mode: 'insensitive' } },
+        include: { subscription: true },
+      });
+    } catch (error) {
+      if (!isSchemaDriftError(error)) throw error;
+      this.logger.warn('User query hit missing column; retrying without phone/trialEndsAt.');
+      return this.findByEmailCompatible(normalized);
+    }
   }
 
-  findById(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: { subscription: true },
-    });
+  async findById(id: string) {
+    try {
+      return await this.prisma.user.findUnique({
+        where: { id },
+        include: { subscription: true },
+      });
+    } catch (error) {
+      if (!isSchemaDriftError(error)) throw error;
+      this.logger.warn('User lookup hit missing column; retrying without phone/trialEndsAt.');
+      return this.findByIdCompatible(id);
+    }
   }
 
   async create(data: {
@@ -44,49 +66,64 @@ export class UsersService {
     firstName?: string;
     lastName?: string;
   }) {
-    return this.prisma.user.create({
-      data: {
-        email: data.email.trim().toLowerCase(),
-        passwordHash: data.passwordHash,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: Role.USER,
-        acceptedTermsAt: new Date(),
-        acceptedDisclaimerAt: new Date(),
-        subscription: {
-          create: { plan: 'FREE', trialEndsAt: trialEndDate() },
+    const payload = {
+      email: data.email.trim().toLowerCase(),
+      passwordHash: data.passwordHash,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      role: Role.USER,
+      acceptedTermsAt: new Date(),
+      acceptedDisclaimerAt: new Date(),
+    };
+    try {
+      return await this.prisma.user.create({
+        data: {
+          ...payload,
+          subscription: {
+            create: { plan: 'FREE', trialEndsAt: trialEndDate() },
+          },
         },
-      },
-      include: { subscription: true },
-    });
+        include: { subscription: true },
+      });
+    } catch (error) {
+      if (!isSchemaDriftError(error)) throw error;
+      this.logger.warn('User create hit missing column; retrying without phone/trialEndsAt.');
+      return this.prisma.user.create({
+        data: {
+          ...payload,
+          subscription: { create: { plan: 'FREE' } },
+        },
+        include: { subscription: true },
+      });
+    }
   }
 
   async getProfile(id: string) {
-    const user = await this.findById(id);
-    if (!user) {
-      throw new NotFoundException('Utente non trovato.');
+    try {
+      const user = await this.findById(id);
+      if (!user) {
+        throw new NotFoundException('Utente non trovato.');
+      }
+      return this.toPublicProfile(user);
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      if (!isSchemaDriftError(error)) throw error;
+      const fallback = await this.findByIdCompatible(id);
+      if (!fallback) {
+        throw new NotFoundException('Utente non trovato.');
+      }
+      return this.toPublicProfile(fallback);
     }
-    const { passwordHash, passwordResetToken, emailVerifyToken, ...safe } = user;
-    const trialEndsAt = user.subscription?.trialEndsAt ?? null;
-    return {
-      ...safe,
-      trialEndsAt,
-      effectivePlan: effectivePlan(user.subscription?.plan, trialEndsAt),
-    };
   }
 
   async updateMe(id: string, dto: UpdateMeDto, meta: RequestMeta = {}) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      throw new NotFoundException('Utente non trovato.');
-    }
-
+    const user = await this.requireUserRecord(id);
     const data: { email?: string; phone?: string | null } = {};
     const fields: string[] = [];
 
     if (dto.phone !== undefined) {
       const phone = normalizePhone(dto.phone);
-      if (phone !== user.phone) {
+      if (phone !== (user.phone ?? null)) {
         data.phone = phone;
         fields.push('phone');
       }
@@ -115,7 +152,16 @@ export class UsersService {
       return this.getProfile(id);
     }
 
-    await this.prisma.user.update({ where: { id }, data });
+    try {
+      await this.prisma.user.update({ where: { id }, data });
+    } catch (error) {
+      if (!isSchemaDriftError(error)) throw error;
+      this.logger.warn('Profile update skipped missing phone column.');
+      if (!data.email) {
+        return this.getProfile(id);
+      }
+      await this.prisma.user.update({ where: { id }, data: { email: data.email } });
+    }
     await this.audit.record({
       action: AuditAction.PROFILE_UPDATE,
       userId: id,
@@ -127,10 +173,7 @@ export class UsersService {
   }
 
   async changePassword(id: string, dto: ChangePasswordDto, meta: RequestMeta = {}) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) {
-      throw new NotFoundException('Utente non trovato.');
-    }
+    const user = await this.requireUserRecord(id);
 
     const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
     if (!ok) {
@@ -180,5 +223,70 @@ export class UsersService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  private toPublicProfile(user: UserWithSubscription) {
+    const { passwordHash, passwordResetToken, emailVerifyToken, ...safe } = user;
+    const trialEndsAt = user.subscription?.trialEndsAt ?? null;
+    return {
+      ...safe,
+      phone: 'phone' in user ? user.phone ?? null : null,
+      trialEndsAt,
+      effectivePlan: effectivePlan(user.subscription?.plan, trialEndsAt),
+    };
+  }
+
+  private async requireUserRecord(id: string) {
+    try {
+      const user = await this.prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        throw new NotFoundException('Utente non trovato.');
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      if (!isSchemaDriftError(error)) throw error;
+      const fallback = await this.findByIdCompatible(id);
+      if (!fallback) {
+        throw new NotFoundException('Utente non trovato.');
+      }
+      return fallback;
+    }
+  }
+
+  private async findByIdCompatible(id: string): Promise<UserWithSubscription | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        ...USER_CORE_SELECT,
+        subscription: { select: SUBSCRIPTION_CORE_SELECT },
+      },
+    });
+    return user ? this.withOptionalColumns(user) : null;
+  }
+
+  private async findByEmailCompatible(email: string): Promise<UserWithSubscription | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: {
+        ...USER_CORE_SELECT,
+        subscription: { select: SUBSCRIPTION_CORE_SELECT },
+      },
+    });
+    return user ? this.withOptionalColumns(user) : null;
+  }
+
+  private withOptionalColumns(
+    user: Prisma.UserGetPayload<{
+      select: typeof USER_CORE_SELECT & { subscription: { select: typeof SUBSCRIPTION_CORE_SELECT } };
+    }>,
+  ): UserWithSubscription {
+    return {
+      ...user,
+      phone: null,
+      subscription: user.subscription
+        ? { ...user.subscription, trialEndsAt: null }
+        : null,
+    };
   }
 }

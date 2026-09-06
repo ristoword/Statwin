@@ -2,8 +2,8 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPatch, apiPost } from '../lib/api';
-import { getAccessToken } from '../lib/auth-storage';
+import { apiGet, apiPatch, apiPost, isUnauthorized } from '../lib/api';
+import { clearTokens, getAccessToken } from '../lib/auth-storage';
 
 export type AccountProfile = {
   email: string;
@@ -48,11 +48,19 @@ export function AccountForm({
     apiGet<AccountProfile>('/users/me', token)
       .then((data) => {
         setProfile(data);
-        setEmail(data.email);
+        setEmail(data.email ?? '');
         setPhone(data.phone ?? '');
         onProfile?.(data);
       })
-      .catch((err: Error) => setLoadError(err.message));
+      .catch((err: Error) => {
+        if (isUnauthorized(err)) {
+          clearTokens();
+          setAuthed(false);
+          setLoadError('Sessione scaduta. Accedi di nuovo.');
+          return;
+        }
+        setLoadError(err.message);
+      });
   }, [onProfile]);
 
   if (!ready) {
