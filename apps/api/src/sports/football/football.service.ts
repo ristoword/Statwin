@@ -24,7 +24,7 @@ export class FootballService {
   }
 
   async matches(competitionId?: string, includeEstimates = false) {
-    const include = { homeTeam: true, awayTeam: true, competition: true } as const;
+    const include = { homeTeam: true, awayTeam: true, competition: true, sport: true } as const;
     const now = new Date();
     const where = {
       sport: { slug: 'football' },
@@ -57,6 +57,7 @@ export class FootballService {
     return this.prisma.match.findUnique({
       where: { id },
       include: {
+        sport: true,
         homeTeam: true,
         awayTeam: true,
         competition: true,

@@ -18,6 +18,14 @@ class AnalyzeDto {
   matchId?: string;
 
   @IsOptional()
+  @IsString()
+  eventId?: string;
+
+  @IsOptional()
+  @IsString()
+  sport?: string;
+
+  @IsOptional()
   @IsObject()
   context?: Record<string, unknown>;
 
@@ -53,6 +61,11 @@ export class AiController {
     return this.ai.listReports();
   }
 
+  @Get('archive')
+  archive() {
+    return this.ai.listArchive();
+  }
+
   @ApiBearerAuth()
   @UseGuards(OptionalJwtAuthGuard)
   @Get('matches/:id')
@@ -65,12 +78,14 @@ export class AiController {
   @RequiresPlan('PRO')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('analyze')
-  async analyze(@Body() dto: AnalyzeDto) {
-    if (dto.matchId) {
-      return this.ai.analyzeStoredMatch(dto.matchId, { force: dto.force });
-    }
-    const report = await this.ai.analyzeMatch(dto.context ?? {});
-    return { layer: 'AI_ANALYSIS', reused: false, ...report };
+  analyze(@Body() dto: AnalyzeDto) {
+    return this.ai.analyzeRequest({
+      matchId: dto.matchId,
+      eventId: dto.eventId,
+      sport: dto.sport,
+      context: dto.context,
+      force: dto.force,
+    });
   }
 
   @Post('jobs/run')

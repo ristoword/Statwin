@@ -7,10 +7,14 @@ import { getAccessToken } from '../lib/auth-storage';
 
 export function GenerateAiButton({
   matchId,
+  eventId,
+  sport,
   force = false,
   label = 'Genera analisi AI',
 }: {
-  matchId: string;
+  matchId?: string;
+  eventId?: string;
+  sport?: string;
   force?: boolean;
   label?: string;
 }) {
@@ -27,7 +31,7 @@ export function GenerateAiButton({
     setBusy(true);
     setError('');
     try {
-      await apiPost('/ai/analyze', { matchId, force }, token);
+      await apiPost('/ai/analyze', { matchId, eventId, sport, force }, token);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analisi non riuscita');

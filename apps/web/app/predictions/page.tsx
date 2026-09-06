@@ -14,6 +14,7 @@ type PredictionItem = {
   away: string;
   kickoff: string;
   competition?: string | null;
+  sport?: { slug?: string; name?: string } | null;
   probabilities?: {
     items?: Array<{ selection: string; probability: number; impliedOdds?: number | null }>;
     outcomes?: Array<{ selection: string; probability: number; impliedOdds?: number | null }>;
@@ -126,7 +127,7 @@ function PredictionCard({ item }: { item: PredictionItem }) {
         </Link>
       </h3>
       <p className="muted">
-        {item.competition ?? 'Calcio'} · {new Date(item.kickoff).toLocaleString('it-IT')}
+        {item.competition ?? item.sport?.name ?? 'Evento'} · {new Date(item.kickoff).toLocaleString('it-IT')}
       </p>
       {locked ? (
         <PlanLock

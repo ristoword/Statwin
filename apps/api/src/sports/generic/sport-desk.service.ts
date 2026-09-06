@@ -40,7 +40,7 @@ export class SportDeskService {
   }
 
   async events(slug: string) {
-    const include = { homeTeam: true, awayTeam: true, competition: true } as const;
+    const include = { homeTeam: true, awayTeam: true, competition: true, sport: true } as const;
     const now = new Date();
     const where = { sport: { slug } };
     const [upcoming, recent] = await Promise.all([

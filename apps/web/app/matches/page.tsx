@@ -15,7 +15,10 @@ export default async function MatchesPage() {
   return (
     <>
       <PageHero kicker="Calendario" title="Partite">
-        <p>Ultime e prossime gare. I punteggi ufficiali sono DATI. Le stime restano PROBABILITÀ.</p>
+        <p>
+          Ultime e prossime gare di tutti gli sport in archivio. I punteggi ufficiali sono DATI. Le
+          stime restano PROBABILITÀ.
+        </p>
       </PageHero>
       <MatchAgenda recent={recent} upcoming={upcoming} />
     </>

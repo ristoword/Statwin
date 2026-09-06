@@ -32,8 +32,8 @@ export class PredictionsController {
   @Get()
   async list(@CurrentUser() user?: { plan?: string }) {
     const matches = await this.prisma.match.findMany({
-      where: { sport: { slug: 'football' } },
       include: {
+        sport: true,
         homeTeam: true,
         awayTeam: true,
         competition: true,
@@ -68,6 +68,7 @@ export class PredictionsController {
           kickoff: match.kickoff,
           status: match.status,
           competition: match.competition?.name ?? null,
+          sport: match.sport ? { slug: match.sport.slug, name: match.sport.name } : null,
           home: match.homeTeam.name,
           away: match.awayTeam.name,
           probabilities: canProb

@@ -4,6 +4,7 @@ import { apiGet } from '../lib/api';
 import { getServerAccessToken } from '../lib/server-auth';
 import { asAgenda, type AgendaMatch } from '../lib/agenda';
 import { findSport } from '../lib/sports-catalog';
+import { AiSportPath } from './ai-sport-path';
 import { EmptyState } from './empty-state';
 import { MatchAgenda } from './match-agenda';
 import { PageHero } from './page-hero';
@@ -170,6 +171,13 @@ export async function SyncedSportPage({
       ) : (
         <MatchAgenda recent={matches.recent} upcoming={matches.upcoming} />
       )}
+
+      <AiSportPath
+        sportSlug={sport.slug}
+        sportName={sport.name}
+        eventNoun={sport.eventNoun}
+        matches={[...matches.upcoming, ...matches.recent]}
+      />
     </>
   );
 }

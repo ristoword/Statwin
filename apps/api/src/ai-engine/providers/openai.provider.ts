@@ -191,7 +191,7 @@ function parsePredictedResult(value: unknown): AIPredictedResult | null {
 function asScore(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   const score = Math.round(value);
-  if (score < 0 || score > 6) return null;
+  if (score < 0 || score > 200) return null;
   return score;
 }
 

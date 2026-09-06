@@ -107,7 +107,7 @@ export default async function Home() {
           <span className="layer-index">04</span>
           <span className="badge badge-ai">ANALISI AI</span>
           <h3>Lettura GPT-4o</h3>
-          <p>L’intelligenza commenta solo ciò che è già nel database. Mai un risultato fantasma.</p>
+          <p>L’AI legge tutti gli sport in archivio. Commenta solo ciò che è già nel database. Mai un risultato fantasma.</p>
         </Link>
       </div>
 

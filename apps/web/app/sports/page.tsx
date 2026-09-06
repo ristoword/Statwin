@@ -11,7 +11,8 @@ export default function SportsPage() {
         </p>
         <p>
           Calcio e basket possono avere dati sincronizzati. Gli altri desk sono predisposti: archivio
-          vuoto, nessuna classifica inventata.
+          vuoto, nessuna classifica inventata. L’AI legge tutti gli sport in archivio; senza DATI
+          non scrive.
         </p>
       </PageHero>
       <SportsGrid />

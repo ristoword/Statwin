@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
 import { getServerAccessToken } from '../../lib/server-auth';
+import { AiSportPath } from '../../components/ai-sport-path';
 import { EmptyState } from '../../components/empty-state';
 import { MatchAgenda } from '../../components/match-agenda';
 import { PageHero } from '../../components/page-hero';
@@ -202,6 +203,13 @@ export default async function FootballPage({
       )}
 
       <MatchAgenda recent={matches.recent} upcoming={matches.upcoming} />
+
+      <AiSportPath
+        sportSlug="football"
+        sportName="Calcio"
+        eventNoun="partite"
+        matches={[...matches.upcoming, ...matches.recent]}
+      />
     </>
   );
 }

@@ -28,4 +28,25 @@ export class SportsService {
   getBySlug(slug: string) {
     return this.prisma.sport.findUnique({ where: { slug } });
   }
+
+  async listMatches(sportSlug?: string) {
+    const include = { homeTeam: true, awayTeam: true, competition: true, sport: true } as const;
+    const now = new Date();
+    const where = sportSlug ? { sport: { slug: sportSlug } } : {};
+    const [upcoming, recent] = await Promise.all([
+      this.prisma.match.findMany({
+        where: { ...where, kickoff: { gte: now } },
+        include,
+        orderBy: { kickoff: 'asc' },
+        take: 30,
+      }),
+      this.prisma.match.findMany({
+        where: { ...where, kickoff: { lt: now } },
+        include,
+        orderBy: { kickoff: 'desc' },
+        take: 30,
+      }),
+    ]);
+    return { recent, upcoming };
+  }
 }

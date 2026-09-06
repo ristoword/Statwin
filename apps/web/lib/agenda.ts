@@ -7,6 +7,7 @@ export type AgendaMatch = {
   homeTeam?: { name: string };
   awayTeam?: { name: string };
   competition?: { name: string };
+  sport?: { name: string; slug: string };
   estimate?: Estimate | null;
 };
 

@@ -30,6 +30,7 @@ export class MatchContextBuilder {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: {
+        sport: true,
         homeTeam: true,
         awayTeam: true,
         competition: true,
@@ -115,6 +116,7 @@ export class MatchContextBuilder {
     return {
       layer: 'DATA',
       id: match.id,
+      sport: match.sport ? { slug: match.sport.slug, name: match.sport.name } : null,
       competition: match.competition?.name ?? null,
       season: match.season?.name ?? null,
       homeTeam: match.homeTeam.name,

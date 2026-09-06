@@ -120,7 +120,7 @@ export default function DashboardPage() {
         <Link className="card" href="/ai-analysis">
           <span className="badge badge-ai">ANALISI AI</span>
           <h3>Lettura GPT-4o</h3>
-          <p>Commenta solo ciò che è già in archivio.</p>
+          <p>L’AI legge tutti gli sport in archivio. Commenta solo ciò che è già presente.</p>
         </Link>
       </div>
 

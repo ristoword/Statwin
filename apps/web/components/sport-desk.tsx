@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiGet } from '../lib/api';
+import { asAgenda, type AgendaMatch } from '../lib/agenda';
 import { findSport } from '../lib/sports-catalog';
+import { AiSportPath } from './ai-sport-path';
 import { EmptyState } from './empty-state';
+import { MatchAgenda } from './match-agenda';
 import { PageHero } from './page-hero';
 
 type SportOverview = {
@@ -15,6 +18,7 @@ export async function SportDesk({ slug }: { slug: string }) {
   if (!sport) notFound();
 
   let overview: SportOverview = { counts: { competitions: 0, teams: 0, matches: 0 } };
+  let events: { recent: AgendaMatch[]; upcoming: AgendaMatch[] } = { recent: [], upcoming: [] };
   try {
     overview = await apiGet<SportOverview>(`/${sport.apiPath}`);
   } catch {
@@ -23,8 +27,14 @@ export async function SportDesk({ slug }: { slug: string }) {
       note: 'API non raggiungibile. Nessun risultato viene inventato.',
     };
   }
+  try {
+    events = asAgenda(await apiGet(`/${sport.apiPath}/events`));
+  } catch {
+    events = { recent: [], upcoming: [] };
+  }
 
   const counts = overview.counts ?? { competitions: 0, teams: 0, matches: 0 };
+  const archived = [...events.upcoming, ...events.recent];
 
   return (
     <>
@@ -51,15 +61,26 @@ export async function SportDesk({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <div className="card coming-panel">
-        <EmptyState
-          title={`${sport.name}: archivio vuoto`}
-          body={
-            overview.note ??
-            'Quando una fonte ufficiale sara collegata, compariranno solo DATI verificati. STATISTICHE, PROBABILITA e ANALISI AI nasceranno da quelli. Finche allora l\'archivio resta vuoto.'
-          }
-        />
-      </div>
+      {archived.length > 0 ? (
+        <MatchAgenda recent={events.recent} upcoming={events.upcoming} />
+      ) : (
+        <div className="card coming-panel">
+          <EmptyState
+            title={`${sport.name}: archivio vuoto`}
+            body={
+              overview.note ??
+              'Quando una fonte ufficiale sara collegata, compariranno solo DATI verificati. STATISTICHE, PROBABILITA e ANALISI AI nasceranno da quelli. Finche allora l\'archivio resta vuoto.'
+            }
+          />
+        </div>
+      )}
+
+      <AiSportPath
+        sportSlug={sport.slug}
+        sportName={sport.name}
+        eventNoun={sport.eventNoun}
+        matches={archived}
+      />
 
       <div className="grid-4 pipeline">
         <div className="card pipeline-card">
@@ -80,7 +101,7 @@ export async function SportDesk({ slug }: { slug: string }) {
         <Link className="card pipeline-card" href="/ai-analysis">
           <span className="badge badge-ai">ANALISI AI</span>
           <h3>Lettura</h3>
-          <p>Commenta solo cio che e gia nel database. Piano PRO.</p>
+          <p>L’AI legge tutti gli sport in archivio. Senza DATI non scrive. Piano PRO.</p>
         </Link>
       </div>
     </>

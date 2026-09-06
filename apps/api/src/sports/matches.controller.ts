@@ -1,6 +1,7 @@
-import { Controller, Get, NotFoundException, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, NotFoundException, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FootballService } from './football/football.service';
+import { SportsService } from './sports.service';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AppPlan } from '../common/enums/roles.enum';
@@ -9,13 +10,16 @@ import { hasMinPlan } from '../subscriptions/plan-limits';
 @ApiTags('matches')
 @Controller({ path: 'matches', version: '1' })
 export class MatchesController {
-  constructor(private readonly football: FootballService) {}
+  constructor(
+    private readonly football: FootballService,
+    private readonly sports: SportsService,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  list(@CurrentUser() user?: { plan?: string }) {
-    return this.football.matches(undefined, hasMinPlan(user?.plan, AppPlan.PREMIUM));
+  list(@Query('sport') sport?: string) {
+    return this.sports.listMatches(sport);
   }
 
   @ApiBearerAuth()

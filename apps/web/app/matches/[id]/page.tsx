@@ -12,6 +12,7 @@ type Layers = {
   disclaimer?: string;
   matchId?: string;
   data?: {
+    sport?: { slug?: string; name?: string } | null;
     homeTeam?: string;
     awayTeam?: string;
     competition?: string | null;
@@ -124,7 +125,9 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <p className="kicker">{data?.competition ?? 'Partita'}</p>
+      <p className="kicker">
+        {[data?.sport?.name, data?.competition].filter(Boolean).join(' · ') || 'Evento'}
+      </p>
       <h1>
         {data?.homeTeam ?? 'Casa'} <span className="muted">vs</span> {data?.awayTeam ?? 'Trasferta'}
       </h1>
@@ -322,12 +325,12 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
                   : null
               }
             />
-            <GenerateAiButton matchId={id} force label="Aggiorna analisi AI" />
+            <GenerateAiButton matchId={id} sport={data?.sport?.slug} force label="Aggiorna analisi AI" />
           </>
         ) : (
           <>
             <p>Nessuna ANALISI AI salvata. Verrà usata solo la scheda già in archivio.</p>
-            <GenerateAiButton matchId={id} />
+            <GenerateAiButton matchId={id} sport={data?.sport?.slug} />
           </>
         )}
       </div>

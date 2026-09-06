@@ -22,21 +22,42 @@ type ReportList = {
         rationale?: string | null;
       } | null;
     };
-    match?: { id: string; home: string; away: string; competition?: string | null; kickoff?: string };
+    match?: {
+      id: string;
+      home: string;
+      away: string;
+      competition?: string | null;
+      kickoff?: string;
+      sport?: { slug: string; name: string } | null;
+    };
   }>;
 };
 
-type Match = {
-  id: string;
-  kickoff?: string;
-  homeTeam?: { name: string };
-  awayTeam?: { name: string };
-  competition?: { name: string };
+type ArchiveSport = {
+  slug: string;
+  name: string;
+  href: string;
+  eventNoun: string;
+  status: string;
+  count: number;
+  items: Array<{
+    id: string;
+    kickoff?: string;
+    homeTeam?: { name: string };
+    awayTeam?: { name: string };
+    competition?: { name: string } | null;
+    sport?: { slug: string; name: string };
+  }>;
+};
+
+type ArchivePayload = {
+  note?: string;
+  sports?: ArchiveSport[];
 };
 
 export default async function AiAnalysisPage() {
   let reports: ReportList['items'] = [];
-  let matches: Match[] = [];
+  let archive: ArchiveSport[] = [];
   let locked = false;
   try {
     const token = await getServerAccessToken();
@@ -47,18 +68,19 @@ export default async function AiAnalysisPage() {
     reports = [];
   }
   try {
-    const list = await apiGet<Match[] | { recent?: Match[]; upcoming?: Match[] }>('/matches');
-    matches = Array.isArray(list) ? list : [...(list.upcoming ?? []), ...(list.recent ?? [])];
+    const payload = await apiGet<ArchivePayload>('/ai/archive');
+    archive = payload.sports ?? [];
   } catch {
-    matches = [];
+    archive = [];
   }
 
   return (
     <>
-      <PageHero kicker="GPT-4o" title="Analisi AI">
+      <PageHero kicker="GPT-4o · tutti gli sport" title="Analisi AI">
         <p className="disclaimer">
-          L’AI legge solo DATI, STATISTICHE e PROBABILITÀ già in archivio. Il risultato previsto è una stima di ANALISI
-          AI, non un DATO ufficiale. 18+. Nessuna vincita promessa.
+          L’AI legge tutti gli sport in archivio. Commenta solo DATI, STATISTICHE e PROBABILITÀ già
+          presenti. Il risultato previsto è una stima di ANALISI AI, non un DATO ufficiale. 18+.
+          Nessuna vincita promessa.
         </p>
       </PageHero>
 
@@ -75,7 +97,7 @@ export default async function AiAnalysisPage() {
         <div className="card">
           <EmptyState
             title="Nessun report salvato"
-            body="Genera un’analisi da una partita già in archivio. Senza DATI l’AI non scrive."
+            body="Genera un’analisi da un evento già in archivio, in qualsiasi sport. Senza DATI l’AI non scrive."
           />
         </div>
       ) : (
@@ -83,6 +105,7 @@ export default async function AiAnalysisPage() {
           {reports.map((report) => (
             <div className="card" key={report.id}>
               <span className="badge badge-ai">ANALISI AI</span>
+              <p className="muted">{report.match?.sport?.name ?? report.match?.competition ?? 'Archivio'}</p>
               <h3>
                 <Link href={`/matches/${report.match?.id}`}>
                   {report.match?.home} vs {report.match?.away}
@@ -112,33 +135,55 @@ export default async function AiAnalysisPage() {
         </div>
       )}
 
-      <h2>Partite in archivio</h2>
-      {matches.length === 0 ? (
+      <h2>Archivio per sport</h2>
+      {archive.length === 0 ? (
         <div className="card">
           <EmptyState
             title="Archivio vuoto"
-            body="Nessuna partita sincronizzata. Senza DATI l’AI non produce analisi."
+            body="Nessun evento sincronizzato. Senza DATI l’AI non produce analisi e non inventa punteggi."
           />
         </div>
       ) : (
-        matches.map((match) => (
-          <div className="card" key={match.id}>
-            <span className="badge badge-data">DATI</span>
+        archive.map((sport) => (
+          <section key={sport.slug}>
             <h3>
-              <Link href={`/matches/${match.id}`}>
-                {match.homeTeam?.name} vs {match.awayTeam?.name}
-              </Link>
+              <Link href={sport.href}>{sport.name}</Link>
+              <span className="muted"> · {sport.count} {sport.eventNoun}</span>
             </h3>
-            <p className="muted">
-              {match.competition?.name ?? 'Calcio'}
-              {match.kickoff ? ` · ${new Date(match.kickoff).toLocaleString('it-IT')}` : ''}
-            </p>
-            {locked ? (
-              <p className="muted">Generazione riservata al piano Pro.</p>
+            {sport.items.length === 0 ? (
+              <div className="card">
+                <EmptyState
+                  title={`Senza DATI l’AI non scrive`}
+                  body={`Nessun ${sport.eventNoun} in archivio per ${sport.name}. STATWIN non inventa risultati.`}
+                />
+                <p>
+                  <Link className="btn-ghost" href={sport.href}>
+                    Apri il desk {sport.name}
+                  </Link>
+                </p>
+              </div>
             ) : (
-              <GenerateAiButton matchId={match.id} />
+              sport.items.map((match) => (
+                <div className="card" key={match.id}>
+                  <span className="badge badge-data">DATI</span>
+                  <h3>
+                    <Link href={`/matches/${match.id}`}>
+                      {match.homeTeam?.name} vs {match.awayTeam?.name}
+                    </Link>
+                  </h3>
+                  <p className="muted">
+                    {match.competition?.name ?? sport.name}
+                    {match.kickoff ? ` · ${new Date(match.kickoff).toLocaleString('it-IT')}` : ''}
+                  </p>
+                  {locked ? (
+                    <p className="muted">Generazione riservata al piano Pro.</p>
+                  ) : (
+                    <GenerateAiButton matchId={match.id} sport={sport.slug} />
+                  )}
+                </div>
+              ))
             )}
-          </div>
+          </section>
         ))
       )}
     </>
