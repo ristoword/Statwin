@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
-import { toCompetitionDto } from '../competition-dto';
+import { toFootballCompetitionDto } from '../competition-dto';
 
 @Injectable()
 export class FootballService {
@@ -86,7 +86,7 @@ export class FootballService {
       include: { seasons: true, leagues: true },
       orderBy: [{ country: 'asc' }, { name: 'asc' }],
     });
-    return rows.map((row) => ({ ...row, ...toCompetitionDto(row) }));
+    return rows.map((row) => ({ ...row, ...toFootballCompetitionDto(row) }));
   }
 
   standings(competitionId?: string) {

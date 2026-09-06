@@ -9,7 +9,7 @@ import {
   ExternalStanding,
   ExternalTeam,
 } from '../interfaces/external-football';
-import { DEFAULT_OPENLIGA_LEAGUES, OPENLIGA_COMPETITIONS } from './european-leagues';
+import { DEFAULT_OPENLIGA_LEAGUES, inferFootballCountry, mergeLeagueIds, OPENLIGA_COMPETITIONS } from './european-leagues';
 
 type OldbTeam = {
   teamId: number;
@@ -69,10 +69,7 @@ export class OpenLigaDbProvider implements FootballDataProvider {
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>('football.openLigaDbBaseUrl') ?? 'https://api.openligadb.de';
     this.seasonYear = Number(config.get<string>('football.seasonYear') ?? new Date().getFullYear());
-    this.shortcuts = (config.get<string>('football.leagues') ?? DEFAULT_OPENLIGA_LEAGUES)
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    this.shortcuts = mergeLeagueIds(config.get<string>('football.leagues'), DEFAULT_OPENLIGA_LEAGUES);
   }
 
   async ping() {
@@ -97,7 +94,7 @@ export class OpenLigaDbProvider implements FootballDataProvider {
         return {
           externalId: `oldb:${shortcut}`,
           name: known?.name ?? live?.leagueName ?? shortcut,
-          country: known?.country ?? 'Germany',
+          country: inferFootballCountry(known?.name ?? live?.leagueName ?? shortcut, known?.country, `oldb:${shortcut}`) ?? 'Germany',
           type: known?.type ?? 'LEAGUE',
           shortcut,
           seasonYear: this.seasonYear,

@@ -40,3 +40,52 @@ export const OPENLIGA_COMPETITIONS: Record<string, LeagueMeta> = {
 };
 
 export const DEFAULT_OPENLIGA_LEAGUES = 'bl1,bl2,dfb';
+
+const NAME_COUNTRY: Array<{ test: RegExp; country: string }> = [
+  { test: /^serie [abc]\b/i, country: 'Italy' },
+  { test: /^coppa italia\b/i, country: 'Italy' },
+  { test: /^premier league\b/i, country: 'England' },
+  { test: /^championship\b/i, country: 'England' },
+  { test: /^league one\b/i, country: 'England' },
+  { test: /^la liga\b/i, country: 'Spain' },
+  { test: /bundesliga|dfb-pokal|3\.\s*liga/i, country: 'Germany' },
+  { test: /^ligue [12]\b/i, country: 'France' },
+  { test: /eredivisie/i, country: 'Netherlands' },
+  { test: /primeira liga/i, country: 'Portugal' },
+  { test: /^pro league\b/i, country: 'Belgium' },
+  { test: /s[uü]per lig/i, country: 'Turkey' },
+  { test: /scottish/i, country: 'Scotland' },
+  { test: /allsvenskan|superettan/i, country: 'Sweden' },
+  { test: /eliteserien/i, country: 'Norway' },
+  { test: /ukrainian/i, country: 'Ukraine' },
+  { test: /^super league\b/i, country: 'Greece' },
+  { test: /uefa|champions league|europa league/i, country: 'Europe' },
+];
+
+export function parseIdList(value?: string | null): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+/** Env extras are kept, but the European catalog is never dropped if Railway has a short leftover list. */
+export function mergeLeagueIds(configured: string | undefined, defaults: string): string[] {
+  return [...new Set([...parseIdList(defaults), ...parseIdList(configured)])];
+}
+
+export function inferFootballCountry(
+  name: string,
+  existing?: string | null,
+  externalId?: string | null,
+): string | undefined {
+  const trimmed = existing?.trim();
+  if (trimmed) return trimmed;
+  if (externalId) {
+    const tsdId = externalId.replace(/^tsd:/, '');
+    if (EUROPEAN_TSD_LEAGUES[tsdId]) return EUROPEAN_TSD_LEAGUES[tsdId].country;
+    const oldbId = externalId.replace(/^oldb:/, '');
+    if (OPENLIGA_COMPETITIONS[oldbId]) return OPENLIGA_COMPETITIONS[oldbId].country;
+  }
+  return NAME_COUNTRY.find((row) => row.test.test(name))?.country;
+}

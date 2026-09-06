@@ -76,11 +76,11 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `SEED_ON_BOOT` | `true` per upsertare l'admin ufficiale (non cancella gli account clienti). Poi `false` se non vuoi riscrivere la password ad ogni boot. |
 | `ADMIN_EMAIL` | `basilepaolo@me.com` |
 | `ADMIN_PASSWORD` | la password scelta dal owner, solo in Railway Variables / `.env` locale, mai in git |
-| `FOOTBALL_DATA_PROVIDER` | `composite` |
+| `FOOTBALL_DATA_PROVIDER` | `composite` (non `openligadb`: quello importa solo la Bundesliga) |
 | `OPENLIGADB_BASE_URL` | `https://api.openligadb.de` |
 | `OPENLIGADB_SEASON` | `2026` |
 | `OPENLIGADB_LEAGUES` | `bl1,bl2,dfb` |
-| `THESPORTSDB_LEAGUES` | Premier, La Liga, Serie A/B/C, Ligue 1/2, Eredivisie, UEFA CL/EL, … |
+| `THESPORTSDB_LEAGUES` | `4328,4329,4330,4332,4334,4335,4336,4337,4338,4339,4344,4347,4354,4358,4394,4396,4398,4400,4401,4403,4480,4481` (Premier, Championship, Scottish, Serie A/B/C, Ligue 1/2, La Liga 1/2, Eredivisie, Pro League, Süper Lig, Primeira, Allsvenskan, Superettan, Ukraine, Eliteserien, UEFA CL/EL) |
 | `OPENAI_API_KEY` | chiave OpenAI (solo Railway / `.env` locale) |
 | `OPENAI_MODEL` | `gpt-4o` |
 | `OPENAI_MAX_TOKENS` | `1024` |
@@ -89,7 +89,9 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `AI_DEFAULT_MODEL` | `gpt-4o` |
 | `AI_SCHEDULER_TOKEN` | token per i job AI schedulati |
 
-Dopo il deploy, imposta `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `SEED_ON_BOOT=true` in Railway e **ridistribuisci**. Il seed crea o aggiorna `basilepaolo@me.com` e disattiva il vecchio `admin@statwin.local` se è rimasto un account separato. Poi sincronizza i dati calcio:
+Dopo il deploy, imposta `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `SEED_ON_BOOT=true` in Railway e **ridistribuisci**. Il seed crea o aggiorna `basilepaolo@me.com` e disattiva il vecchio `admin@statwin.local` se è rimasto un account separato.
+
+Senza `FOOTBALL_DATA_PROVIDER=composite` e la lista europea in `THESPORTSDB_LEAGUES`, `/football` resta solo Italia + Germania (Serie A/B/C leftover + OpenLigaDB). Poi sincronizza i campionati:
 
 ```bash
 curl -X POST https://statwin-production.up.railway.app/api/v1/football/sync

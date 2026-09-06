@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { FOOTBALL_DATA_PROVIDER } from '../../data-providers/data-providers.module';
 import { FootballDataProvider } from '../../data-providers/interfaces/sports-data-provider';
 import { ExternalCompetition } from '../../data-providers/interfaces/external-football';
+import { inferFootballCountry } from '../../data-providers/football/european-leagues';
 
 @Injectable()
 export class FootballSyncService {
@@ -27,6 +28,7 @@ export class FootballSyncService {
     });
 
     const competitions = await this.provider.fetchCompetitions();
+    await this.backfillCountries();
     let teams = 0;
     let matches = 0;
     let standings = 0;
@@ -61,14 +63,28 @@ export class FootballSyncService {
     };
   }
 
+  private async backfillCountries() {
+    const rows = await this.prisma.competition.findMany({
+      where: { sport: { slug: 'football' } },
+      select: { id: true, name: true, country: true, externalId: true },
+    });
+    for (const row of rows) {
+      const country = inferFootballCountry(row.name, row.country, row.externalId);
+      if (!country || country === row.country) continue;
+      await this.prisma.competition.update({ where: { id: row.id }, data: { country } });
+      await this.prisma.league.updateMany({ where: { competitionId: row.id }, data: { country } });
+    }
+  }
+
   private async upsertCompetition(sportId: string, incoming: ExternalCompetition) {
+    const country = inferFootballCountry(incoming.name, incoming.country, incoming.externalId) ?? incoming.country;
     const competition = await this.prisma.competition.upsert({
       where: { sportId_name: { sportId, name: incoming.name } },
-      update: { country: incoming.country, type: incoming.type ?? 'LEAGUE', externalId: incoming.externalId, isActive: true },
+      update: { country, type: incoming.type ?? 'LEAGUE', externalId: incoming.externalId, isActive: true },
       create: {
         sportId,
         name: incoming.name,
-        country: incoming.country,
+        country,
         type: incoming.type ?? 'LEAGUE',
         externalId: incoming.externalId,
         isActive: true,
@@ -83,7 +99,7 @@ export class FootballSyncService {
         data: {
           competitionId: competition.id,
           name: incoming.name,
-          country: incoming.country,
+          country,
           externalId: incoming.externalId,
         },
       });

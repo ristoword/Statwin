@@ -1,4 +1,4 @@
-import { competitionSection, toCompetitionDto } from './competition-dto';
+import { competitionSection, toCompetitionDto, toFootballCompetitionDto } from './competition-dto';
 
 describe('competition dto', () => {
   it('keeps the provider country and exposes a section for grouping', () => {
@@ -21,5 +21,11 @@ describe('competition dto', () => {
 
   it('does not invent a country when the provider omitted it', () => {
     expect(toCompetitionDto({ id: '4', name: 'Unknown Cup' }).country).toBeNull();
+  });
+
+  it('infers football country from league name or TheSportsDB id', () => {
+    expect(toFootballCompetitionDto({ id: '5', name: 'Premier League' }).country).toBe('England');
+    expect(toFootballCompetitionDto({ id: '6', name: 'Campionato', externalId: 'tsd:4335' }).country).toBe('Spain');
+    expect(toFootballCompetitionDto({ id: '7', name: 'Unknown Cup' }).country).toBeNull();
   });
 });

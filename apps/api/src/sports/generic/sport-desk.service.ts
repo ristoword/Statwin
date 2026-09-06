@@ -3,7 +3,7 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
 import { EMPTY_SPORTS, findWiredSport } from '../../data-providers/thesportsdb/wired-sports';
 import { findSport } from '../sport-catalog';
-import { toCompetitionDto } from '../competition-dto';
+import { toCompetitionDto, toFootballCompetitionDto } from '../competition-dto';
 
 @Injectable()
 export class SportDeskService {
@@ -48,7 +48,10 @@ export class SportDeskService {
       include: { seasons: true, leagues: true },
       orderBy: [{ country: 'asc' }, { name: 'asc' }],
     });
-    return rows.map((row) => ({ ...row, ...toCompetitionDto(row) }));
+    return rows.map((row) => ({
+      ...row,
+      ...(slug === 'football' ? toFootballCompetitionDto(row) : toCompetitionDto(row)),
+    }));
   }
 
   async events(slug: string) {

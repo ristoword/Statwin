@@ -1,3 +1,5 @@
+import { inferFootballCountry } from '../data-providers/football/european-leagues';
+
 const WORLD = /^(world|worldwide|international|internazionale|global)$/i;
 const EUROPE = /^(europe|europa|uefa)$/i;
 
@@ -6,6 +8,7 @@ export type CompetitionRow = {
   name: string;
   country?: string | null;
   type?: string | null;
+  externalId?: string | null;
 };
 
 export function competitionCountry(country?: string | null): string | null {
@@ -29,4 +32,11 @@ export function toCompetitionDto(row: CompetitionRow) {
     type: row.type ?? 'LEAGUE',
     section: competitionSection(country),
   };
+}
+
+export function toFootballCompetitionDto(row: CompetitionRow) {
+  return toCompetitionDto({
+    ...row,
+    country: inferFootballCountry(row.name, row.country, row.externalId) ?? row.country,
+  });
 }

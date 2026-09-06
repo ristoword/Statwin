@@ -8,7 +8,7 @@ import {
   ExternalStanding,
   ExternalTeam,
 } from '../interfaces/external-football';
-import { DEFAULT_TSD_LEAGUES, EUROPEAN_TSD_LEAGUES } from './european-leagues';
+import { DEFAULT_TSD_LEAGUES, EUROPEAN_TSD_LEAGUES, inferFootballCountry, mergeLeagueIds } from './european-leagues';
 
 type TsdTeam = {
   idTeam: string;
@@ -57,10 +57,7 @@ export class TheSportsDbProvider implements FootballDataProvider {
     this.baseUrl = (config.get<string>('football.theSportsDbBaseUrl') ?? 'https://www.thesportsdb.com/api/v1/json').replace(/\/$/, '');
     this.apiKey = config.get<string>('football.theSportsDbKey') ?? '3';
     this.season = config.get<string>('football.theSportsDbSeason') ?? '2026-2027';
-    this.leagueIds = (config.get<string>('football.theSportsDbLeagues') ?? DEFAULT_TSD_LEAGUES)
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
+    this.leagueIds = mergeLeagueIds(config.get<string>('football.theSportsDbLeagues'), DEFAULT_TSD_LEAGUES);
   }
 
   async ping() {
@@ -70,18 +67,35 @@ export class TheSportsDbProvider implements FootballDataProvider {
 
   async fetchCompetitions(): Promise<ExternalCompetition[]> {
     const year = Number(this.season.slice(0, 4));
-    return this.leagueIds.map((id) => {
+    const competitions: ExternalCompetition[] = [];
+    for (const id of this.leagueIds) {
       const known = EUROPEAN_TSD_LEAGUES[id];
-      return {
+      let name = known?.name ?? `Campionato ${id}`;
+      let country = known?.country;
+      const type = known?.type ?? 'LEAGUE';
+      if (!known) {
+        try {
+          const payload = await this.getJson<{ leagues?: Array<{ strLeague?: string; strCountry?: string }> }>(
+            `/lookupleague.php?id=${id}`,
+          );
+          const league = payload.leagues?.[0];
+          if (league?.strLeague) name = league.strLeague;
+          if (league?.strCountry?.trim()) country = league.strCountry.trim();
+        } catch {
+          /* keep catalog / name fallback */
+        }
+      }
+      competitions.push({
         externalId: `tsd:${id}`,
-        name: known?.name ?? `Campionato ${id}`,
-        country: known?.country ?? 'Europe',
-        type: known?.type ?? 'LEAGUE',
+        name,
+        country: inferFootballCountry(name, country, `tsd:${id}`) ?? 'Europe',
+        type,
         shortcut: id,
         seasonYear: year,
         seasonName: this.season,
-      };
-    });
+      });
+    }
+    return competitions;
   }
 
   async fetchTeams(competition: ExternalCompetition): Promise<ExternalTeam[]> {

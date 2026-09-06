@@ -139,8 +139,35 @@ function circuitFromName(name: string, sportSlug: string): string | null {
   return null;
 }
 
+const FOOTBALL_NAME_COUNTRY: Array<{ test: RegExp; country: string }> = [
+  { test: /^serie [abc]\b/i, country: 'Italy' },
+  { test: /^premier league\b/i, country: 'England' },
+  { test: /^championship\b/i, country: 'England' },
+  { test: /^league one\b/i, country: 'England' },
+  { test: /^la liga\b/i, country: 'Spain' },
+  { test: /bundesliga|dfb-pokal/i, country: 'Germany' },
+  { test: /^ligue [12]\b/i, country: 'France' },
+  { test: /eredivisie/i, country: 'Netherlands' },
+  { test: /primeira liga/i, country: 'Portugal' },
+  { test: /^pro league\b/i, country: 'Belgium' },
+  { test: /s[uü]per lig/i, country: 'Turkey' },
+  { test: /scottish/i, country: 'Scotland' },
+  { test: /allsvenskan|superettan/i, country: 'Sweden' },
+  { test: /eliteserien/i, country: 'Norway' },
+  { test: /ukrainian/i, country: 'Ukraine' },
+  { test: /^super league\b/i, country: 'Greece' },
+  { test: /uefa|champions league|europa league/i, country: 'Europe' },
+];
+
+function inferFootballCountryFromName(name: string): string {
+  return FOOTBALL_NAME_COUNTRY.find((row) => row.test.test(name))?.country ?? '';
+}
+
 export function sectionKey(item: DeskCompetition, sportSlug: string): string {
-  const raw = normalizeCountry(item.country) || normalizeCountry(item.section);
+  const raw =
+    normalizeCountry(item.country) ||
+    normalizeCountry(item.section) ||
+    (sportSlug === 'football' ? inferFootballCountryFromName(item.name) : '');
   if (sportSlug === 'football' && isEurope(raw)) return 'Europe';
   if (isWorld(raw)) {
     return circuitFromName(item.name, sportSlug) ?? 'Internazionale';
@@ -149,7 +176,7 @@ export function sectionKey(item: DeskCompetition, sportSlug: string): string {
 }
 
 export function sectionLabel(key: string, sportSlug: string): string {
-  if (sportSlug === 'football' && key === 'Europe') return 'Europa / UEFA';
+  if (sportSlug === 'football' && key === 'Europe') return 'Europa';
   return COUNTRY_LABELS[key] ?? key;
 }
 
