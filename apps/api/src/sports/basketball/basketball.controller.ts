@@ -30,8 +30,12 @@ export class BasketballController {
   @ApiBearerAuth()
   @UseGuards(OptionalJwtAuthGuard)
   @Get('matches')
-  matches(@Query('competitionId') competitionId?: string, @CurrentUser() user?: { plan?: string }) {
-    return this.basketball.matches(competitionId, hasMinPlan(user?.plan, AppPlan.PREMIUM));
+  matches(
+    @Query('competitionId') competitionId?: string,
+    @Query('q') q?: string,
+    @CurrentUser() user?: { plan?: string },
+  ) {
+    return this.basketball.matches(competitionId, hasMinPlan(user?.plan, AppPlan.PREMIUM), q);
   }
 
   @Get('events')

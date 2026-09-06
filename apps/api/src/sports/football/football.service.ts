@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
 import { toFootballCompetitionDto } from '../competition-dto';
 import { loadOfficialStandings, strengthFromStanding, toStandingsPayload } from '../generic/standings';
+import { DESK_RECENT_LIMIT, DESK_UPCOMING_LIMIT, matchSearchWhere } from '../match-agenda.query';
 
 @Injectable()
 export class FootballService {
@@ -25,25 +26,26 @@ export class FootballService {
     };
   }
 
-  async matches(competitionId?: string, includeEstimates = false) {
+  async matches(competitionId?: string, includeEstimates = false, q?: string) {
     const include = { homeTeam: true, awayTeam: true, competition: true, sport: true } as const;
     const now = new Date();
     const where = {
       sport: { slug: 'football' },
       ...(competitionId ? { competitionId } : {}),
+      ...matchSearchWhere(q),
     };
     const [upcoming, recent] = await Promise.all([
       this.prisma.match.findMany({
         where: { ...where, kickoff: { gte: now } },
         include,
         orderBy: { kickoff: 'asc' },
-        take: 20,
+        take: DESK_UPCOMING_LIMIT,
       }),
       this.prisma.match.findMany({
         where: { ...where, kickoff: { lt: now } },
         include,
         orderBy: { kickoff: 'desc' },
-        take: 20,
+        take: DESK_RECENT_LIMIT,
       }),
     ]);
     const estimates = includeEstimates
