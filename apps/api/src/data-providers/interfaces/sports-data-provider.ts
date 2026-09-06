@@ -17,6 +17,8 @@ export interface FootballDataProvider extends SportsDataProvider {
   fetchStandings?(competition: ExternalCompetition): Promise<ExternalStanding[]>;
 }
 
+export type BasketballDataProvider = FootballDataProvider;
+
 export interface OddsDataProvider {
   readonly slug: string;
   syncOdds(): Promise<{ imported: number }>;

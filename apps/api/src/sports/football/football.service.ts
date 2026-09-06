@@ -23,7 +23,7 @@ export class FootballService {
     };
   }
 
-  async matches(competitionId?: string) {
+  async matches(competitionId?: string, includeEstimates = false) {
     const include = { homeTeam: true, awayTeam: true, competition: true } as const;
     const now = new Date();
     const where = {
@@ -44,7 +44,9 @@ export class FootballService {
         take: 20,
       }),
     ]);
-    const estimates = await this.estimatesFor([...recent, ...upcoming]);
+    const estimates = includeEstimates
+      ? await this.estimatesFor([...recent, ...upcoming])
+      : new Map<string, ReturnType<PredictionEngineService['estimate']>>();
     return {
       recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
       upcoming: upcoming.map((match) => this.withEstimate(match, estimates.get(match.id))),

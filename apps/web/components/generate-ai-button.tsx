@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiPost } from '../lib/api';
+import { getAccessToken } from '../lib/auth-storage';
 
 export function GenerateAiButton({
   matchId,
@@ -18,10 +19,15 @@ export function GenerateAiButton({
   const [error, setError] = useState('');
 
   async function run() {
+    const token = getAccessToken();
+    if (!token) {
+      router.push('/login?next=/ai-analysis');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      await apiPost('/ai/analyze', { matchId, force });
+      await apiPost('/ai/analyze', { matchId, force }, token);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analisi non riuscita');

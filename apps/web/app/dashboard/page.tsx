@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
 import { clearTokens, getAccessToken } from '../../lib/auth-storage';
+import { SportsGrid } from '../../components/sports-grid';
 
 type Profile = {
   email: string;
@@ -39,7 +40,10 @@ export default function DashboardPage() {
     <>
       <p className="kicker">Control room</p>
       <h1>Il tuo desk.</h1>
-      <p className="disclaimer">Calcio attivo. Gli altri sport sono moduli predisposti, senza dati inventati.</p>
+      <p className="disclaimer">
+        Desk multi-sport. Calcio e basket possono avere dati sincronizzati; gli altri moduli restano
+        predisposti, senza risultati inventati. 18+.
+      </p>
       {error ? <p className="disclaimer">{error}</p> : null}
 
       <div className="card">
@@ -52,6 +56,11 @@ export default function DashboardPage() {
               </h3>
               <p>
                 Piano <strong>{profile.subscription?.plan ?? 'FREE'}</strong> · {profile.role}
+              </p>
+              <p>
+                <Link className="btn-ghost" href="/subscriptions">
+                  Gestisci piano
+                </Link>
               </p>
             </div>
             <div>
@@ -114,6 +123,9 @@ export default function DashboardPage() {
           <p>Commenta solo ciò che è già in archivio.</p>
         </Link>
       </div>
+
+      <h2>Sport</h2>
+      <SportsGrid compact />
     </>
   );
 }

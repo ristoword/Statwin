@@ -5,12 +5,21 @@ const prisma = new PrismaClient();
 async function main() {
   const sports = [
     { slug: 'football', name: 'Calcio', isActive: true },
-    { slug: 'basketball', name: 'Basket', isActive: false },
-    { slug: 'volleyball', name: 'Pallavolo', isActive: false },
-    { slug: 'tennis', name: 'Tennis', isActive: false },
-    { slug: 'horse-racing', name: 'Ippica', isActive: false },
-    { slug: 'baseball', name: 'Baseball', isActive: false },
-    { slug: 'formula1', name: 'Formula 1', isActive: false },
+    { slug: 'basketball', name: 'Basket', isActive: true },
+    { slug: 'tennis', name: 'Tennis', isActive: true },
+    { slug: 'volleyball', name: 'Pallavolo', isActive: true },
+    { slug: 'baseball', name: 'Baseball', isActive: true },
+    { slug: 'american-football', name: 'Football americano', isActive: true },
+    { slug: 'ice-hockey', name: 'Hockey su ghiaccio', isActive: true },
+    { slug: 'formula1', name: 'Formula 1', isActive: true },
+    { slug: 'horse-racing', name: 'Ippica', isActive: true },
+    { slug: 'rugby', name: 'Rugby', isActive: true },
+    { slug: 'handball', name: 'Pallamano', isActive: true },
+    { slug: 'mma', name: 'MMA / UFC', isActive: true },
+    { slug: 'golf', name: 'Golf', isActive: true },
+    { slug: 'cycling', name: 'Ciclismo', isActive: true },
+    { slug: 'cricket', name: 'Cricket', isActive: true },
+    { slug: 'darts', name: 'Darts', isActive: true },
   ];
 
   for (const sport of sports) {

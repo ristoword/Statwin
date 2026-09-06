@@ -69,7 +69,7 @@ export function MatchAgenda({
                 match.kickoff ? new Date(match.kickoff).toLocaleString('it-IT') : '',
                 match.estimate?.predictedScore
                   ? `Stima modello ${match.estimate.predictedScore.home}–${match.estimate.predictedScore.away}`
-                  : 'Stima non calcolabile',
+                  : '',
               ].filter(Boolean)}
             />
           ))

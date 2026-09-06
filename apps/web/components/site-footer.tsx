@@ -13,7 +13,10 @@ export function SiteFooter() {
           <p className="muted">Sports intelligence. Analisi, non scommesse. 18+.</p>
         </div>
         <div className="footer-cols">
-          <Link href="/football">Calcio italiano</Link>
+          <Link href="/football">Calcio europeo</Link>
+          <Link href="/live">Diretta ufficiale</Link>
+          <Link href="/basketball">Basket</Link>
+          <Link href="/sports">Tutti gli sport</Link>
           <Link href="/statistics">Statistiche</Link>
           <Link href="/predictions">Probabilità</Link>
           <Link href="/ai-analysis">Analisi AI</Link>

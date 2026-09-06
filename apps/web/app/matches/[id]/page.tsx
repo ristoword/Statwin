@@ -1,7 +1,11 @@
 import Link from 'next/link';
 import { apiGet } from '../../../lib/api';
+import { LIVE_FALLBACK, type LiveMatch } from '../../../lib/live';
+import { getServerAccessToken } from '../../../lib/server-auth';
 import { GenerateAiButton } from '../../../components/generate-ai-button';
 import { MarketBoard } from '../../../components/market-board';
+import { OfficialWatchLinks } from '../../../components/official-watch-links';
+import { PlanLock } from '../../../components/plan-lock';
 import { PredictedResult } from '../../../components/predicted-result';
 
 type Layers = {
@@ -21,7 +25,10 @@ type Layers = {
     form?: { home?: FormBlock; away?: FormBlock };
     headToHead?: { recent?: Array<{ home: string; away: string; score: string }> };
   } | null;
+  access?: { plan?: string; probabilities?: boolean; ai?: boolean };
   probabilities?: {
+    locked?: boolean;
+    requiredPlan?: string;
     source?: string;
     items?: Array<{ selection: string; probability: number }>;
     outcomes?: Array<{ selection: string; probability: number }>;
@@ -45,10 +52,12 @@ type Layers = {
     modelOutcomes?: Array<{ selection: string; probability: number; impliedOdds?: number | null }>;
   } | null;
   odds?: {
+    locked?: boolean;
     disclaimer?: string;
     items?: Array<{ bookmaker?: string; market?: string; selection?: string; price?: number }>;
   } | null;
   aiAnalysis?: {
+    locked?: boolean;
     content?: {
       analysis?: string;
       favorable?: string[];
@@ -83,7 +92,17 @@ type FormBlock = {
 
 async function getLayers(id: string): Promise<Layers | null> {
   try {
-    return await apiGet<Layers>(`/ai/matches/${id}`);
+    const token = await getServerAccessToken();
+    return await apiGet<Layers>(`/ai/matches/${id}`, token);
+  } catch {
+    return null;
+  }
+}
+
+async function getOfficialWatch(id: string) {
+  try {
+    const payload = await apiGet<{ match: LiveMatch | null }>(`/live/matches/${id}`);
+    return payload.match;
   } catch {
     return null;
   }
@@ -95,7 +114,7 @@ function pct(value: number) {
 
 export default async function MatchAnalysisPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const layers = await getLayers(id);
+  const [layers, officialWatch] = await Promise.all([getLayers(id), getOfficialWatch(id)]);
   const data = layers?.data;
   const stats = layers?.statistics;
   const probs = layers?.probabilities;
@@ -133,6 +152,27 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
         {!data?.score ? <p className="muted">Punteggio non presente in archivio: non viene inventato.</p> : null}
       </div>
 
+      <div className="card">
+        <span className="badge badge-data">DIRETTA UFFICIALE</span>
+        <h3>Guarda in diretta ufficiale</h3>
+        <p className="disclaimer">
+          STATWIN non è un broadcaster. Solo elenchi ufficiali/legali. 18+. Nessun stream non autorizzato.
+        </p>
+        {officialWatch?.listings?.length ? (
+          <OfficialWatchLinks listings={officialWatch.listings} />
+        ) : (
+          <p className="muted">
+            {LIVE_FALLBACK.empty?.message ??
+              'Nessun elenco ufficiale per questa gara. Non viene indicato un canale inventato.'}
+          </p>
+        )}
+        <p>
+          <Link className="btn-ghost" href="/live">
+            Vai alla sezione Live
+          </Link>
+        </p>
+      </div>
+
       <div className="grid-2">
         <div className="card">
           <span className="badge badge-stats">STATISTICHE</span>
@@ -163,7 +203,13 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
         <div className="card">
           <span className="badge badge-prob">PROBABILITÀ</span>
           <h3>Stime modellistiche</h3>
-          {outcomes.length > 0 ? (
+          {probs?.locked ? (
+            <PlanLock
+              required="PREMIUM"
+              title="Probabilità riservate a Premium"
+              body="Il piano Free mostra DATI e STATISTICHE. Le stime modellistiche si sbloccano da Premium."
+            />
+          ) : outcomes.length > 0 ? (
             outcomes.map((item) => (
               <div key={item.selection}>
                 <strong>
@@ -177,20 +223,24 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
           ) : (
             <p>Nessuna PROBABILITÀ in archivio e classifica insufficiente per stimarla.</p>
           )}
-          <PredictedResult
-            variant="prob"
-            title="Risultato previsto · modello"
-            home={data?.homeTeam}
-            away={data?.awayTeam}
-            prediction={probs?.predictedScore}
-          />
-          <MarketBoard
-            outcomes={outcomes}
-            overUnder={probs?.overUnder}
-            btts={probs?.btts}
-            disclaimer={probs?.impliedOddsDisclaimer}
-          />
-          <p className="disclaimer">Stime, non certezze. Non è un consiglio di scommessa.</p>
+          {probs?.locked ? null : (
+            <>
+              <PredictedResult
+                variant="prob"
+                title="Risultato previsto · modello"
+                home={data?.homeTeam}
+                away={data?.awayTeam}
+                prediction={probs?.predictedScore}
+              />
+              <MarketBoard
+                outcomes={outcomes}
+                overUnder={probs?.overUnder}
+                btts={probs?.btts}
+                disclaimer={probs?.impliedOddsDisclaimer}
+              />
+              <p className="disclaimer">Stime, non certezze. Non è un consiglio di scommessa.</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -223,7 +273,13 @@ export default async function MatchAnalysisPage({ params }: { params: Promise<{ 
       <div className="card">
         <span className="badge badge-ai">ANALISI AI</span>
         <h3>Lettura dei dati esistenti</h3>
-        {ai?.analysis ? (
+        {layers?.aiAnalysis?.locked ? (
+          <PlanLock
+            required="PRO"
+            title="Analisi AI riservata a Pro"
+            body="Il piano Pro sblocca i report ANALISI AI e la lettura completa a quattro livelli."
+          />
+        ) : ai?.analysis ? (
           <>
             <p>{ai.analysis}</p>
             {ai.favorable?.length ? (

@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { BrandMark } from './brand-mark';
+import { SportsNav } from './sports-nav';
 import { clearTokens, getAccessToken } from '../lib/auth-storage';
 
 const LINKS = [
   { href: '/football', label: 'Calcio' },
   { href: '/matches', label: 'Partite' },
+  { href: '/live', label: 'Live' },
   { href: '/statistics', label: 'Statistiche' },
   { href: '/predictions', label: 'Probabilità' },
   { href: '/ai-analysis', label: 'Analisi AI' },
@@ -52,6 +54,7 @@ export function SiteHeader() {
               {link.label}
             </Link>
           ))}
+          <SportsNav pathname={pathname} onNavigate={() => setOpen(false)} />
         </nav>
         <div className={`header-cta${open ? ' open' : ''}`}>
           {authed ? (

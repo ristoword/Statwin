@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
+import { getServerAccessToken } from '../../lib/server-auth';
 import { EmptyState } from '../../components/empty-state';
 import { GenerateAiButton } from '../../components/generate-ai-button';
 import { PageHero } from '../../components/page-hero';
+import { PlanLock } from '../../components/plan-lock';
 import { PredictedResult } from '../../components/predicted-result';
 
 type ReportList = {
+  locked?: boolean;
   items?: Array<{
     id: string;
     createdAt: string;
@@ -34,8 +37,11 @@ type Match = {
 export default async function AiAnalysisPage() {
   let reports: ReportList['items'] = [];
   let matches: Match[] = [];
+  let locked = false;
   try {
-    const payload = await apiGet<ReportList>('/ai/reports');
+    const token = await getServerAccessToken();
+    const payload = await apiGet<ReportList>('/ai/reports', token);
+    locked = Boolean(payload.locked);
     reports = payload.items ?? [];
   } catch {
     reports = [];
@@ -56,8 +62,16 @@ export default async function AiAnalysisPage() {
         </p>
       </PageHero>
 
+      {locked ? (
+        <PlanLock
+          required="PRO"
+          title="Analisi AI riservata a Pro"
+          body="Il piano Pro sblocca i report ANALISI AI e la lettura completa a quattro livelli."
+        />
+      ) : null}
+
       <h2>Report recenti</h2>
-      {reports.length === 0 ? (
+      {locked ? null : reports.length === 0 ? (
         <div className="card">
           <EmptyState
             title="Nessun report salvato"
@@ -119,7 +133,11 @@ export default async function AiAnalysisPage() {
               {match.competition?.name ?? 'Calcio'}
               {match.kickoff ? ` · ${new Date(match.kickoff).toLocaleString('it-IT')}` : ''}
             </p>
-            <GenerateAiButton matchId={match.id} />
+            {locked ? (
+              <p className="muted">Generazione riservata al piano Pro.</p>
+            ) : (
+              <GenerateAiButton matchId={match.id} />
+            )}
           </div>
         ))
       )}

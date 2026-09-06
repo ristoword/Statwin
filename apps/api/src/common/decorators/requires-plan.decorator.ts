@@ -1,4 +1,4 @@
 import { SetMetadata } from '@nestjs/common';
+import { PLANS_KEY } from '../guards/plan.guard';
 
-export const PLAN_KEY = 'requiredPlan';
-export const RequiresPlan = (...plans: string[]) => SetMetadata(PLAN_KEY, plans);
+export const RequiresPlan = (...plans: string[]) => SetMetadata(PLANS_KEY, plans);

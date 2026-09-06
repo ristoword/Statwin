@@ -105,10 +105,61 @@ button, input, select, textarea { font: inherit; }
   white-space: nowrap;
 }
 .nav-links a:hover,
-.nav-links a.active {
+.nav-links a.active,
+.nav-sports.active > .nav-sports-toggle {
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
 }
+.nav-sports { position: relative; }
+.nav-sports-toggle {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+.nav-sports-toggle:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.sports-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(8, 9, 12, 0.96);
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+.nav-sports.open .sports-menu,
+.nav-sports:hover .sports-menu { display: grid; gap: 2px; }
+.sports-menu a {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+.sports-menu a em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+.sports-menu-all { color: var(--gold) !important; }
+.sport-card h3 { font-size: 22px; }
+.sport-focus { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.sports-grid-compact .sport-card p:last-child { display: none; }
 .header-cta { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
 .nav-toggle {
   display: none;
@@ -285,6 +336,14 @@ a.card:hover, a.panel:hover, .card-link:hover {
 
 .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
 .tabs a { margin: 0; }
+.league-board { display: grid; gap: 18px; }
+.league-country { display: grid; gap: 8px; }
+.league-country-label {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 
 .table-wrap { overflow: auto; }
 table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -447,6 +506,10 @@ label input { width: auto; margin: 0; }
     radial-gradient(400px 180px at 80% 0%, rgba(232,200,114,0.16), transparent 60%),
     linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
 }
+.plan-lock {
+  border-style: dashed;
+}
+.plan-lock .btn { margin-top: 12px; }
 .coming { opacity: 0.78; }
 .predicted {
   margin-top: 18px;
@@ -535,6 +598,41 @@ label input { width: auto; margin: 0; }
 .form-dot.D, .form-dot.N { background: rgba(232,200,114,0.16); color: var(--gold); }
 .form-dot.L, .form-dot.P { background: rgba(255,107,107,0.16); color: var(--red); }
 
+.badge-live {
+  color: var(--green);
+  border-color: rgba(62, 224, 160, 0.32);
+  background: rgba(62, 224, 160, 0.1);
+}
+.live-group { margin-top: 28px; }
+.live-card .btn-ghost { margin-top: 8px; }
+.watch-links {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 8px;
+  display: grid;
+  gap: 10px;
+}
+.watch-link {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.22);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.watch-link:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-2px);
+}
+.watch-link-kind {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 .cta-band {
   margin-top: 48px;
   padding: 42px;
@@ -550,6 +648,11 @@ label input { width: auto; margin: 0; }
   .nav-links, .header-cta { display: none; width: 100%; }
   .nav-links.open, .header-cta.open { display: flex; }
   .header-inner { flex-wrap: wrap; padding: 12px 0; }
+  .nav-sports { width: 100%; }
+  .sports-menu, .nav-sports:hover .sports-menu { position: static; min-width: 0; max-height: none; background: transparent; border: 0; box-shadow: none; padding: 0; }
+  .nav-sports.open .sports-menu { display: grid; }
+  .nav-sports:hover .sports-menu { display: none; }
+  .nav-sports.open:hover .sports-menu { display: grid; }
 }
 @media (max-width: 860px) {
   .home-bg { inset: -24px -20% auto auto; opacity: 0.9; }

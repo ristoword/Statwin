@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { apiV1, apiGet } from '../lib/api';
 import { asAgenda } from '../lib/agenda';
 import { MatchAgenda } from '../components/match-agenda';
+import { SportsGrid } from '../components/sports-grid';
 
 type FootballOverview = {
   counts?: { competitions: number; teams: number; matches: number };
@@ -52,11 +53,15 @@ export default async function Home() {
           </h1>
           <p>
             STATWIN è un terminal di analisi sportiva. Separa in modo visivo e tecnico DATI,
-            STATISTICHE, PROBABILITÀ e ANALISI AI. Il primo sport attivo è il calcio italiano.
+            STATISTICHE, PROBABILITÀ e ANALISI AI. Il calcio europeo è il primo sport sincronizzato;
+            il desk copre tutti i principali sport con mercati di analisi, senza inventare risultati.
           </p>
           <div className="hero-actions">
             <Link className="btn" href="/football">
               Entra nel calcio
+            </Link>
+            <Link className="btn-ghost" href="/sports">
+              Tutti gli sport
             </Link>
             <Link className="btn-ghost" href="/subscriptions">
               Vedi i piani
@@ -109,29 +114,12 @@ export default async function Home() {
       <h2>Ultime e prossime</h2>
       <MatchAgenda recent={agenda.recent} upcoming={agenda.upcoming} />
 
-      <h2>Sport</h2>
-      <div className="grid">
-        <Link className="card" href="/football">
-          <span className="badge badge-data">LIVE</span>
-          <h3>Calcio</h3>
-          <p>Serie A, B e C. Classifiche, calendari e schede partita a quattro livelli.</p>
-        </Link>
-        <Link className="card coming" href="/basketball">
-          <span className="badge">PREDISPOSTO</span>
-          <h3>Basket</h3>
-          <p>Modulo pronto. Nessun dato finché non arriva il provider.</p>
-        </Link>
-        <Link className="card coming" href="/tennis">
-          <span className="badge">PREDISPOSTO</span>
-          <h3>Tennis</h3>
-          <p>Stessa architettura, stesso rigoroso rispetto delle fonti.</p>
-        </Link>
-        <Link className="card coming" href="/volleyball">
-          <span className="badge">PREDISPOSTO</span>
-          <h3>Pallavolo</h3>
-          <p>In attesa di integrazione. L’AI non riempie i vuoti.</p>
-        </Link>
-      </div>
+      <h2 id="sport">Sport del desk</h2>
+      <p className="muted">
+        Analisi, non bookmaker. Calcio e basket possono avere fonti collegate; gli altri sport restano
+        predisposti con archivio vuoto.
+      </p>
+      <SportsGrid />
 
       <section className="cta-band">
         <p className="kicker">Accesso riservato</p>

@@ -1,6 +1,6 @@
 # STATWIN — Sports Analytics AI
 
-Piattaforma SaaS di **analisi statistica sportiva**. Il primo sport attivo è il **calcio**. L'architettura è multi-sport: basketball, volleyball, tennis, ippica, baseball e F1 sono moduli predisposti.
+Piattaforma SaaS di **analisi statistica sportiva**. Il **calcio** è il primo sport sincronizzato; il **basket** (NBA / Euroleague via TheSportsDB) è il secondo. Gli altri desk — tennis, pallavolo, baseball, NFL, hockey, F1, ippica, rugby, pallamano, MMA, golf, ciclismo, cricket, darts — sono moduli predisposti: archivio vuoto, nessun risultato inventato.
 
 STATWIN non è un bookmaker. Le probabilità sono **stime**, non certezze. Non promette vincite. Accesso 18+.
 
@@ -74,10 +74,11 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `ADMIN_URL` | `https://statwin-production.up.railway.app` |
 | `API_INTERNAL_URL` | `http://127.0.0.1:3001` |
 | `SEED_ON_BOOT` | `true` al primo deploy, poi `false` |
-| `FOOTBALL_DATA_PROVIDER` | `openligadb` |
+| `FOOTBALL_DATA_PROVIDER` | `composite` |
 | `OPENLIGADB_BASE_URL` | `https://api.openligadb.de` |
 | `OPENLIGADB_SEASON` | `2026` |
-| `OPENLIGADB_LEAGUES` | `bl1` |
+| `OPENLIGADB_LEAGUES` | `bl1,bl2,dfb` |
+| `THESPORTSDB_LEAGUES` | Premier, La Liga, Serie A/B/C, Ligue 1/2, Eredivisie, UEFA CL/EL, … |
 | `OPENAI_API_KEY` | chiave OpenAI (solo Railway / `.env` locale) |
 | `OPENAI_MODEL` | `gpt-4o` |
 | `OPENAI_MAX_TOKENS` | `1024` |
@@ -103,6 +104,8 @@ Prefisso: `/api/v1`
 - `/subscriptions`
 - `/sports`
 - `/football`
+- `/basketball`
+- `/tennis` e gli altri sport del catalogo (overview + competitions/events vuoti se predisposti)
 - `/matches`
 - `/statistics`
 - `/predictions` (piano PREMIUM+)
@@ -120,13 +123,21 @@ CORE COMUNE + SPORT MODULES + DATA PROVIDERS
 
 Il motore statistico è sport-agnostico. Il modello predittivo è sostituibile via DI. OpenAI è un adapter, mai chiamato dai controller.
 
-Provider calcio: **TheSportsDB** (Serie A, Serie B, Serie C Girone C) + **OpenLigaDB** (Bundesliga). Sync:
+Provider calcio: **TheSportsDB** (campionati europei e coppe UEFA) + **OpenLigaDB** (Bundesliga, 2. Bundesliga, DFB-Pokal). Sync:
 
 ```bash
 curl -X POST http://localhost:3001/api/v1/football/sync
 ```
 
-Per aggiungere la 2. Bundesliga: `OPENLIGADB_LEAGUES=bl1,bl2` in `.env`. Un altro provider si collega implementando `FootballDataProvider`, senza toccare i controller.
+Per aggiungere un campionato: metti l’ID TheSportsDB in `THESPORTSDB_LEAGUES` o lo shortcut OpenLigaDB in `OPENLIGADB_LEAGUES`. Un altro provider si collega implementando `FootballDataProvider`, senza toccare i controller.
+
+Provider basket: **TheSportsDB** (NBA `4387`, EuroLeague `4546`). Sync:
+
+```bash
+curl -X POST http://localhost:3001/api/v1/basketball/sync
+```
+
+Stagione e leghe: `THESPORTSDB_BASKETBALL_SEASON` e `THESPORTSDB_BASKETBALL_LEAGUES`. Solo punteggi `FINISHED` restituiti dalla fonte. Gli altri sport restano desk predisposti (`GET /{sport}` con array vuoti) finché non esiste un provider legale.
 
 ## Piani
 

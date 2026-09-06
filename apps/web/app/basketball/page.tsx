@@ -1,5 +1,10 @@
-import { ComingSoon } from '../../components/coming-soon';
+import { SyncedSportPage } from '../../components/synced-sport-page';
 
-export default function BasketballPage() {
-  return <ComingSoon sport="Basket" />;
+export default async function BasketballPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
+  const { c } = await searchParams;
+  return <SyncedSportPage slug="basketball" competitionId={c} />;
 }

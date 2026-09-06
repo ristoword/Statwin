@@ -1,5 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { AppPlan } from '../common/enums/roles.enum';
+import { hasMinPlan } from '../subscriptions/plan-limits';
 import { MatchContextBuilder, toPublicReport } from './match-context.builder';
 import { AIContext, AIProvider, AIReportResult } from './providers/ai-provider';
 
@@ -28,8 +30,21 @@ export class AiEngineService {
     return this.provider.analyzeMatch(context);
   }
 
-  layers(matchId: string) {
-    return this.contextBuilder.layers(matchId);
+  async layers(matchId: string, plan = 'FREE') {
+    const full = await this.contextBuilder.layers(matchId);
+    const canProb = hasMinPlan(plan, AppPlan.PREMIUM);
+    const canAi = hasMinPlan(plan, AppPlan.PRO);
+    return {
+      ...full,
+      access: { plan, probabilities: canProb, ai: canAi },
+      probabilities: canProb
+        ? full.probabilities
+        : { layer: 'PROBABILITY', locked: true, requiredPlan: 'PREMIUM' },
+      odds: canProb ? full.odds : { locked: true, requiredPlan: 'PREMIUM' },
+      aiAnalysis: canAi
+        ? full.aiAnalysis
+        : { layer: 'AI_ANALYSIS', locked: true, requiredPlan: 'PRO' },
+    };
   }
 
   async analyzeStoredMatch(matchId: string, options?: { force?: boolean }) {

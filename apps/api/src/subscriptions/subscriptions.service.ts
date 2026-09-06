@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { PLAN_LIMITS } from './plan-limits';
+import { catalogPlans, PLAN_LIMITS } from './plan-limits';
 import { AppPlan } from '../common/enums/roles.enum';
 
 @Injectable()
@@ -8,14 +9,34 @@ export class SubscriptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   listPlans() {
-    return Object.entries(PLAN_LIMITS).map(([plan, limits]) => ({
-      plan,
-      limits,
-    }));
+    return catalogPlans();
   }
 
   getByUser(userId: string) {
     return this.prisma.subscription.findUnique({ where: { userId } });
+  }
+
+  async activate(userId: string, plan: SubscriptionPlan) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!user) {
+      throw new NotFoundException('Utente non trovato.');
+    }
+    const currentPeriodEnd = new Date();
+    currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+    return this.prisma.subscription.upsert({
+      where: { userId },
+      create: {
+        userId,
+        plan,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodEnd,
+      },
+      update: {
+        plan,
+        status: SubscriptionStatus.ACTIVE,
+        currentPeriodEnd,
+      },
+    });
   }
 
   canUse(plan: AppPlan, feature: keyof (typeof PLAN_LIMITS)[AppPlan]) {

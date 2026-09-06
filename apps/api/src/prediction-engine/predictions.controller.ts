@@ -1,8 +1,15 @@
-import { Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsNumber } from 'class-validator';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { PredictionEngineService } from './prediction-engine.service';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { PlanGuard } from '../common/guards/plan.guard';
+import { RequiresPlan } from '../common/decorators/requires-plan.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AppPlan } from '../common/enums/roles.enum';
+import { hasMinPlan } from '../subscriptions/plan-limits';
 
 class EstimateDto {
   @IsNumber()
@@ -20,8 +27,10 @@ export class PredictionsController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @ApiBearerAuth()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  async list() {
+  async list(@CurrentUser() user?: { plan?: string }) {
     const matches = await this.prisma.match.findMany({
       where: { sport: { slug: 'football' } },
       include: {
@@ -38,14 +47,18 @@ export class PredictionsController {
 
     const items = await Promise.all(
       matches.map(async (match) => {
+        const canProb = hasMinPlan(user?.plan, AppPlan.PREMIUM);
+        const canAi = hasMinPlan(user?.plan, AppPlan.PRO);
         const stored = match.predictions.map((item) => ({
           market: item.market,
           selection: item.selection,
           probability: item.probability,
           disclaimer: item.disclaimer,
         }));
-        const computed = await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId);
-        const report = match.aiReports[0];
+        const computed = canProb
+          ? await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId)
+          : null;
+        const report = canAi ? match.aiReports[0] : null;
         const content = report?.content as {
           analysis?: string;
           predictedResult?: { outcome?: string; scoreHome?: number; scoreAway?: number; confidence?: string; rationale?: string } | null;
@@ -57,8 +70,8 @@ export class PredictionsController {
           competition: match.competition?.name ?? null,
           home: match.homeTeam.name,
           away: match.awayTeam.name,
-          probabilities:
-            stored.length > 0
+          probabilities: canProb
+            ? stored.length > 0
               ? {
                   layer: 'PROBABILITY',
                   source: 'stored',
@@ -68,7 +81,8 @@ export class PredictionsController {
                   btts: computed?.btts ?? null,
                   impliedOddsDisclaimer: computed?.impliedOddsDisclaimer ?? null,
                 }
-              : computed,
+              : computed
+            : { layer: 'PROBABILITY', locked: true, requiredPlan: 'PREMIUM' },
           aiCommentary: report
             ? {
                 layer: 'AI_ANALYSIS',
@@ -77,14 +91,24 @@ export class PredictionsController {
                 predictedResult: content?.predictedResult ?? null,
                 createdAt: report.createdAt,
               }
-            : null,
+            : canAi
+              ? null
+              : { layer: 'AI_ANALYSIS', locked: true, requiredPlan: 'PRO' },
         };
       }),
     );
 
     const now = Date.now();
+    const canProb = hasMinPlan(user?.plan, AppPlan.PREMIUM);
     return {
       layer: 'PROBABILITY',
+      locked: !canProb,
+      requiredPlan: canProb ? undefined : 'PREMIUM',
+      access: {
+        plan: user?.plan ?? 'FREE',
+        probabilities: canProb,
+        ai: hasMinPlan(user?.plan, AppPlan.PRO),
+      },
       disclaimer:
         'Stime modellistiche, non certezze. Le quote sono implicite del modello, non di un bookmaker. 18+.',
       items,
@@ -93,8 +117,10 @@ export class PredictionsController {
     };
   }
 
+  @ApiBearerAuth()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':matchId')
-  async one(@Param('matchId') matchId: string) {
+  async one(@Param('matchId') matchId: string, @CurrentUser() user?: { plan?: string }) {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: {
@@ -108,14 +134,18 @@ export class PredictionsController {
     if (!match) {
       throw new NotFoundException('Partita non trovata');
     }
+    const canProb = hasMinPlan(user?.plan, AppPlan.PREMIUM);
+    const canAi = hasMinPlan(user?.plan, AppPlan.PRO);
     const stored = match.predictions.map((item) => ({
       market: item.market,
       selection: item.selection,
       probability: item.probability,
       disclaimer: item.disclaimer,
     }));
-    const computed = await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId);
-    const report = match.aiReports[0];
+    const computed = canProb
+      ? await this.estimateFromStandings(match.homeTeamId, match.awayTeamId, match.seasonId)
+      : null;
+    const report = canAi ? match.aiReports[0] : null;
     const content = report?.content as {
       analysis?: string;
       favorable?: string[];
@@ -124,12 +154,14 @@ export class PredictionsController {
     } | null;
     return {
       layer: 'PROBABILITY',
+      locked: !canProb,
+      requiredPlan: canProb ? undefined : 'PREMIUM',
       matchId: match.id,
       home: match.homeTeam.name,
       away: match.awayTeam.name,
       competition: match.competition?.name ?? null,
-      probabilities:
-        stored.length > 0
+      probabilities: canProb
+        ? stored.length > 0
           ? {
               layer: 'PROBABILITY',
               source: 'stored',
@@ -139,7 +171,8 @@ export class PredictionsController {
               btts: computed?.btts ?? null,
               impliedOddsDisclaimer: computed?.impliedOddsDisclaimer ?? null,
             }
-          : computed,
+          : computed
+        : { layer: 'PROBABILITY', locked: true, requiredPlan: 'PREMIUM' },
       aiCommentary: report
         ? {
             layer: 'AI_ANALYSIS',
@@ -150,10 +183,15 @@ export class PredictionsController {
             predictedResult: content?.predictedResult ?? null,
             createdAt: report.createdAt,
           }
-        : null,
+        : canAi
+          ? null
+          : { layer: 'AI_ANALYSIS', locked: true, requiredPlan: 'PRO' },
     };
   }
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, PlanGuard)
+  @RequiresPlan('PREMIUM')
   @Post('estimate')
   estimate(@Body() dto: EstimateDto) {
     return {

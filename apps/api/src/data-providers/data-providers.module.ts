@@ -4,9 +4,11 @@ import { NoopFootballProvider } from './football/noop-football.provider';
 import { OpenLigaDbProvider } from './football/openligadb.provider';
 import { TheSportsDbProvider } from './football/thesportsdb.provider';
 import { CompositeFootballProvider } from './football/composite-football.provider';
-import { FootballDataProvider } from './interfaces/sports-data-provider';
+import { BasketballDataProvider, FootballDataProvider } from './interfaces/sports-data-provider';
+import { TheSportsDbBasketballProvider } from './basketball/thesportsdb-basketball.provider';
 
 export const FOOTBALL_DATA_PROVIDER = Symbol('FOOTBALL_DATA_PROVIDER');
+export const BASKETBALL_DATA_PROVIDER = Symbol('BASKETBALL_DATA_PROVIDER');
 
 @Module({
   imports: [ConfigModule],
@@ -15,6 +17,7 @@ export const FOOTBALL_DATA_PROVIDER = Symbol('FOOTBALL_DATA_PROVIDER');
     OpenLigaDbProvider,
     TheSportsDbProvider,
     CompositeFootballProvider,
+    TheSportsDbBasketballProvider,
     {
       provide: FOOTBALL_DATA_PROVIDER,
       inject: [
@@ -38,7 +41,12 @@ export const FOOTBALL_DATA_PROVIDER = Symbol('FOOTBALL_DATA_PROVIDER');
         return composite;
       },
     },
+    {
+      provide: BASKETBALL_DATA_PROVIDER,
+      inject: [TheSportsDbBasketballProvider],
+      useFactory: (thesportsdb: TheSportsDbBasketballProvider): BasketballDataProvider => thesportsdb,
+    },
   ],
-  exports: [FOOTBALL_DATA_PROVIDER],
+  exports: [FOOTBALL_DATA_PROVIDER, BASKETBALL_DATA_PROVIDER],
 })
 export class DataProvidersModule {}

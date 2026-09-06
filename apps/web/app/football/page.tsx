@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
+import { getServerAccessToken } from '../../lib/server-auth';
 import { EmptyState } from '../../components/empty-state';
 import { MatchAgenda } from '../../components/match-agenda';
 import { PageHero } from '../../components/page-hero';
@@ -17,7 +18,6 @@ type Competition = {
   country?: string | null;
 };
 
-
 type Standing = {
   position: number;
   played: number;
@@ -28,15 +28,51 @@ type Standing = {
   team: { name: string };
 };
 
-const ITALY_ORDER = ['Serie A', 'Serie B', 'Serie C Girone C'];
+const COUNTRY_ORDER = [
+  'England',
+  'Spain',
+  'Italy',
+  'Germany',
+  'France',
+  'Portugal',
+  'Netherlands',
+  'Belgium',
+  'Turkey',
+  'Greece',
+  'Scotland',
+  'Sweden',
+  'Norway',
+  'Ukraine',
+  'Europe',
+];
+
+function countryRank(country?: string | null) {
+  const index = COUNTRY_ORDER.indexOf(country ?? '');
+  return index === -1 ? 99 : index;
+}
 
 function sortCompetitions(items: Competition[]): Competition[] {
   return [...items].sort((a, b) => {
-    const ai = ITALY_ORDER.indexOf(a.name);
-    const bi = ITALY_ORDER.indexOf(b.name);
-    if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    const country = countryRank(a.country) - countryRank(b.country);
+    if (country !== 0) return country;
     return a.name.localeCompare(b.name, 'it');
   });
+}
+
+function groupByCountry(items: Competition[]) {
+  const groups = new Map<string, Competition[]>();
+  for (const item of items) {
+    const key = item.country?.trim() || 'Europa';
+    const list = groups.get(key) ?? [];
+    list.push(item);
+    groups.set(key, list);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => countryRank(a[0]) - countryRank(b[0]) || a[0].localeCompare(b[0], 'it'))
+    .map(([country, competitions]) => ({
+      country,
+      competitions: competitions.sort((a, b) => a.name.localeCompare(b.name, 'it')),
+    }));
 }
 
 async function load(competitionId?: string) {
@@ -46,11 +82,11 @@ async function load(competitionId?: string) {
       apiGet<Competition[]>('/football/competitions'),
     ]);
     const competitions = Array.isArray(rawCompetitions) ? sortCompetitions(rawCompetitions) : [];
-    const selectedId =
-      competitionId ?? competitions.find((item) => item.name.startsWith('Serie A'))?.id ?? competitions[0]?.id;
+    const selectedId = competitionId ?? competitions[0]?.id;
     const query = selectedId ? `?competitionId=${selectedId}` : '';
+    const token = await getServerAccessToken();
     const [matches, standings] = await Promise.all([
-      apiGet<unknown>(`/football/matches${query}`),
+      apiGet<unknown>(`/football/matches${query}`, token),
       apiGet<Standing[]>(`/football/standings${query}`),
     ]);
     return {
@@ -79,10 +115,11 @@ export default async function FootballPage({
   const { c } = await searchParams;
   const { overview, competitions, selectedId, matches, standings } = await load(c);
   const selected = competitions.find((item) => item.id === selectedId);
+  const groups = groupByCountry(competitions);
 
   return (
     <>
-      <PageHero kicker="Calcio · Italia" title={selected?.name ?? 'Calcio'}>
+      <PageHero kicker={`Calcio · ${selected?.country ?? 'Europa'}`} title={selected?.name ?? 'Calcio europeo'}>
         <p className="disclaimer">
           Nessun risultato inventato: i punteggi appaiono solo se la fonte ha chiuso la gara.
         </p>
@@ -103,16 +140,23 @@ export default async function FootballPage({
         </div>
       </div>
 
-      {competitions.length > 0 ? (
-        <div className="card tabs">
-          {competitions.map((competition) => (
-            <Link
-              key={competition.id}
-              href={`/football?c=${competition.id}`}
-              className={`chip ${selectedId === competition.id ? 'chip-active' : 'chip-data'}`}
-            >
-              {competition.name}
-            </Link>
+      {groups.length > 0 ? (
+        <div className="card league-board">
+          {groups.map((group) => (
+            <section className="league-country" key={group.country}>
+              <p className="muted league-country-label">{group.country}</p>
+              <div className="tabs">
+                {group.competitions.map((competition) => (
+                  <Link
+                    key={competition.id}
+                    href={`/football?c=${competition.id}`}
+                    className={`chip ${selectedId === competition.id ? 'chip-active' : 'chip-data'}`}
+                  >
+                    {competition.name}
+                  </Link>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       ) : null}

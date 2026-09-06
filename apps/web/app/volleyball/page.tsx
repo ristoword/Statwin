@@ -1,5 +1,5 @@
-import { ComingSoon } from '../../components/coming-soon';
+import { SportDesk } from '../../components/sport-desk';
 
 export default function VolleyballPage() {
-  return <ComingSoon sport="Pallavolo" />;
+  return <SportDesk slug="volleyball" />;
 }

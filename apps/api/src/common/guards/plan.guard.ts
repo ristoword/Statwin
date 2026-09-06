@@ -17,7 +17,10 @@ export class PlanGuard implements CanActivate {
       return true;
     }
     const { user } = context.switchToHttp().getRequest<{ user?: { plan?: AppPlan } }>();
-    if (!user?.plan || !required.includes(user.plan)) {
+    const rank: Record<string, number> = { FREE: 0, PREMIUM: 1, PRO: 2 };
+    const userRank = rank[user?.plan ?? 'FREE'] ?? 0;
+    const needed = Math.min(...required.map((plan) => rank[plan] ?? 99));
+    if (userRank < needed) {
       throw new ForbiddenException('Piano di abbonamento insufficiente per questa funzione.');
     }
     return true;

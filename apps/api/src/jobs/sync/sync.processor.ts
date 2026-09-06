@@ -12,7 +12,7 @@ export class SyncProcessor extends WorkerHost {
   }
 
   async process(job: Job) {
-    this.logger.log(`Sync job ${job.name} via OpenLigaDB`);
+    this.logger.log(`Sync job ${job.name} via provider calcio europeo`);
     return this.footballSync.syncAll();
   }
 }

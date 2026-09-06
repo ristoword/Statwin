@@ -9,11 +9,13 @@ import { TennisModule } from './tennis/tennis.module';
 import { HorseRacingModule } from './horse-racing/horse-racing.module';
 import { BaseballModule } from './baseball/baseball.module';
 import { Formula1Module } from './formula1/formula1.module';
+import { PredisposedSportsModule } from './generic/predisposed-sports.module';
 
 @Module({
   imports: [
     FootballModule,
     BasketballModule,
+    PredisposedSportsModule,
     VolleyballModule,
     TennisModule,
     HorseRacingModule,

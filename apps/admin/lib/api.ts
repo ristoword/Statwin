@@ -34,6 +34,21 @@ export async function apiGet<T>(path: string, token?: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function apiPatch<T>(path: string, body: unknown, token?: string): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${apiV1()}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Errore API ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 export async function apiPost<T>(path: string, body: unknown, token?: string): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',

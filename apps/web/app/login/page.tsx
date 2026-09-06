@@ -24,7 +24,8 @@ export default function LoginPage() {
         password: String(form.get('password') ?? ''),
       });
       saveTokens(tokens.accessToken, tokens.refreshToken);
-      router.push('/dashboard');
+      const next = new URLSearchParams(window.location.search).get('next');
+      router.push(next && next.startsWith('/') ? next : '/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login non riuscito');
     } finally {

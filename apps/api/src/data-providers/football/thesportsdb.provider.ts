@@ -8,6 +8,7 @@ import {
   ExternalStanding,
   ExternalTeam,
 } from '../interfaces/external-football';
+import { DEFAULT_TSD_LEAGUES, EUROPEAN_TSD_LEAGUES } from './european-leagues';
 
 type TsdTeam = {
   idTeam: string;
@@ -44,12 +45,6 @@ type TsdTableRow = {
   intPoints?: string | number;
 };
 
-const LEAGUE_NAMES: Record<string, string> = {
-  '4332': 'Serie A',
-  '4394': 'Serie B',
-  '4398': 'Serie C Girone C',
-};
-
 @Injectable()
 export class TheSportsDbProvider implements FootballDataProvider {
   readonly slug = 'thesportsdb';
@@ -62,28 +57,31 @@ export class TheSportsDbProvider implements FootballDataProvider {
     this.baseUrl = (config.get<string>('football.theSportsDbBaseUrl') ?? 'https://www.thesportsdb.com/api/v1/json').replace(/\/$/, '');
     this.apiKey = config.get<string>('football.theSportsDbKey') ?? '3';
     this.season = config.get<string>('football.theSportsDbSeason') ?? '2026-2027';
-    this.leagueIds = (config.get<string>('football.theSportsDbLeagues') ?? '4332,4394,4398')
+    this.leagueIds = (config.get<string>('football.theSportsDbLeagues') ?? DEFAULT_TSD_LEAGUES)
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
   }
 
   async ping() {
-    const res = await fetch(`${this.baseUrl}/${this.apiKey}/lookupleague.php?id=4332`);
+    const res = await fetch(`${this.baseUrl}/${this.apiKey}/lookupleague.php?id=4328`);
     return { ok: res.ok, provider: this.slug };
   }
 
   async fetchCompetitions(): Promise<ExternalCompetition[]> {
     const year = Number(this.season.slice(0, 4));
-    return this.leagueIds.map((id) => ({
-      externalId: `tsd:${id}`,
-      name: LEAGUE_NAMES[id] ?? `Campionato ${id}`,
-      country: 'Italy',
-      type: 'LEAGUE',
-      shortcut: id,
-      seasonYear: year,
-      seasonName: this.season,
-    }));
+    return this.leagueIds.map((id) => {
+      const known = EUROPEAN_TSD_LEAGUES[id];
+      return {
+        externalId: `tsd:${id}`,
+        name: known?.name ?? `Campionato ${id}`,
+        country: known?.country ?? 'Europe',
+        type: known?.type ?? 'LEAGUE',
+        shortcut: id,
+        seasonYear: year,
+        seasonName: this.season,
+      };
+    });
   }
 
   async fetchTeams(competition: ExternalCompetition): Promise<ExternalTeam[]> {
@@ -102,14 +100,14 @@ export class TheSportsDbProvider implements FootballDataProvider {
         unique.set(`tsd:team:${event.idHomeTeam}`, {
           externalId: `tsd:team:${event.idHomeTeam}`,
           name: event.strHomeTeam,
-          country: 'Italy',
+          country: competition.country,
         });
       }
       if (event.idAwayTeam && event.strAwayTeam) {
         unique.set(`tsd:team:${event.idAwayTeam}`, {
           externalId: `tsd:team:${event.idAwayTeam}`,
           name: event.strAwayTeam,
-          country: 'Italy',
+          country: competition.country,
         });
       }
     }
@@ -146,7 +144,7 @@ export class TheSportsDbProvider implements FootballDataProvider {
       name: team.strTeam,
       shortName: team.strTeamShort || undefined,
       logo: team.strTeamBadge || undefined,
-      country: team.strCountry || 'Italy',
+      country: team.strCountry || undefined,
     };
   }
 
@@ -194,13 +192,24 @@ export class TheSportsDbProvider implements FootballDataProvider {
   private async getJson<T>(path: string): Promise<T> {
     const url = `${this.baseUrl}/${this.apiKey}${path.startsWith('/') ? path : `/${path}`}`;
     let lastError: Error | undefined;
-    for (let attempt = 1; attempt <= 4; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, attempt === 1 ? 400 : 1500 * attempt));
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const waitMs = attempt === 1 ? 700 : 2500 * attempt;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (res.ok) {
-        return (await res.json()) as T;
-      }
       if (res.status === 404) return {} as T;
+      if (res.ok) {
+        const text = await res.text();
+        if (!text.trim()) {
+          lastError = new Error(`TheSportsDB ${path} empty body`);
+          continue;
+        }
+        try {
+          return JSON.parse(text) as T;
+        } catch {
+          lastError = new Error(`TheSportsDB ${path} invalid JSON`);
+          continue;
+        }
+      }
       lastError = new Error(`TheSportsDB ${path} failed: ${res.status}`);
       if (res.status !== 429 && res.status < 500) break;
     }

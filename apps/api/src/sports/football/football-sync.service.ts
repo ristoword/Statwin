@@ -150,12 +150,14 @@ export class FootballSyncService {
         match.homeTeamExternalId,
         match.homeTeamName,
         teamByExternal,
+        competition.country,
       );
       const awayTeamId = await this.ensureTeam(
         sportId,
         match.awayTeamExternalId,
         match.awayTeamName,
         teamByExternal,
+        competition.country,
       );
       if (!homeTeamId || !awayTeamId) {
         this.logger.warn(`Skip match ${match.externalId}: squadra mancante`);
@@ -215,14 +217,15 @@ export class FootballSyncService {
     externalId: string,
     name: string | undefined,
     cache: Map<string | null, string>,
+    country?: string,
   ): Promise<string | undefined> {
     const existing = cache.get(externalId);
     if (existing) return existing;
     if (!name) return undefined;
     const team = await this.prisma.team.upsert({
       where: { externalId },
-      update: { name },
-      create: { sportId, externalId, name, country: 'Italy' },
+      update: { name, country },
+      create: { sportId, externalId, name, country },
     });
     cache.set(externalId, team.id);
     return team.id;

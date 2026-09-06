@@ -4,3 +4,5 @@ export { default as redisConfig } from './redis.config';
 export { default as aiConfig } from './ai.config';
 export { default as paymentsConfig } from './payments.config';
 export { default as footballConfig } from './football.config';
+export { default as basketballConfig } from './basketball.config';
+

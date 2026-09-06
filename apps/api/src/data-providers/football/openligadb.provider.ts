@@ -9,6 +9,7 @@ import {
   ExternalStanding,
   ExternalTeam,
 } from '../interfaces/external-football';
+import { DEFAULT_OPENLIGA_LEAGUES, OPENLIGA_COMPETITIONS } from './european-leagues';
 
 type OldbTeam = {
   teamId: number;
@@ -53,9 +54,9 @@ type OldbTableRow = {
   draw: number;
 };
 
-const COMPETITIONS: Record<string, { name: string; country: string }> = {
-  bl1: { name: '1. Bundesliga', country: 'Germany' },
-  bl2: { name: '2. Bundesliga', country: 'Germany' },
+type OldbLeague = {
+  leagueShortcut?: string;
+  leagueName?: string;
 };
 
 @Injectable()
@@ -68,7 +69,7 @@ export class OpenLigaDbProvider implements FootballDataProvider {
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>('football.openLigaDbBaseUrl') ?? 'https://api.openligadb.de';
     this.seasonYear = Number(config.get<string>('football.seasonYear') ?? new Date().getFullYear());
-    this.shortcuts = (config.get<string>('football.leagues') ?? 'bl1')
+    this.shortcuts = (config.get<string>('football.leagues') ?? DEFAULT_OPENLIGA_LEAGUES)
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
@@ -80,17 +81,30 @@ export class OpenLigaDbProvider implements FootballDataProvider {
   }
 
   async fetchCompetitions(): Promise<ExternalCompetition[]> {
+    let available: OldbLeague[] = [];
+    try {
+      available = await this.getJson<OldbLeague[]>('/getavailableleagues');
+    } catch {
+      available = [];
+    }
     return this.shortcuts
-      .filter((shortcut) => COMPETITIONS[shortcut])
-      .map((shortcut) => ({
-        externalId: `oldb:${shortcut}`,
-        name: COMPETITIONS[shortcut].name,
-        country: COMPETITIONS[shortcut].country,
-        type: 'LEAGUE',
-        shortcut,
-        seasonYear: this.seasonYear,
-        seasonName: `${this.seasonYear}/${this.seasonYear + 1}`,
-      }));
+      .map((shortcut) => {
+        const known = OPENLIGA_COMPETITIONS[shortcut];
+        const live = available.find(
+          (item) => item.leagueShortcut?.toLowerCase() === shortcut.toLowerCase(),
+        );
+        if (!known && !live) return null;
+        return {
+          externalId: `oldb:${shortcut}`,
+          name: known?.name ?? live?.leagueName ?? shortcut,
+          country: known?.country ?? 'Germany',
+          type: known?.type ?? 'LEAGUE',
+          shortcut,
+          seasonYear: this.seasonYear,
+          seasonName: `${this.seasonYear}/${this.seasonYear + 1}`,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
   }
 
   async fetchTeams(competition: ExternalCompetition): Promise<ExternalTeam[]> {
