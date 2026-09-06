@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
+    "icons": "node ./scripts/generate-pwa-icons.mjs",
     "test": "node -e \"console.log('web tests: no unit suite yet')\""
   },
   "dependencies": {

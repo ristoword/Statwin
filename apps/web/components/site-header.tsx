@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { BrandMark } from './brand-mark';
+import { InstallAppButton } from './install-app-button';
 import { SportsNav } from './sports-nav';
 import { clearTokens, getAccessToken } from '../lib/auth-storage';
 
@@ -24,6 +25,7 @@ export function SiteHeader() {
 
   useEffect(() => {
     setAuthed(Boolean(getAccessToken()));
+    setOpen(false);
   }, [pathname]);
 
   return (
@@ -36,14 +38,18 @@ export function SiteHeader() {
           </span>
         </Link>
         <button
-          className="nav-toggle"
+          className={`nav-toggle${open ? ' open' : ''}`}
           type="button"
-          aria-label="Apri menu"
+          aria-label={open ? 'Chiudi menu' : 'Apri menu'}
+          aria-expanded={open}
+          aria-controls="site-nav"
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? '✕' : '☰'}
+          <span />
+          <span />
+          <span />
         </button>
-        <nav className={`nav-links${open ? ' open' : ''}`}>
+        <nav id="site-nav" className={`nav-links${open ? ' open' : ''}`}>
           {LINKS.map((link) => (
             <Link
               key={link.href}
@@ -57,6 +63,7 @@ export function SiteHeader() {
           <SportsNav pathname={pathname} onNavigate={() => setOpen(false)} />
         </nav>
         <div className={`header-cta${open ? ' open' : ''}`}>
+          <InstallAppButton />
           {authed ? (
             <>
               <Link className="btn-ghost" href="/dashboard" onClick={() => setOpen(false)}>

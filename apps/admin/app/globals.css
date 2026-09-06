@@ -105,7 +105,10 @@ h3 { margin: 0 0 8px; font-size: 16px; }
   margin-bottom: 8px;
 }
 .table-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--panel);
@@ -223,3 +226,41 @@ button:disabled, .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed;
 .modal h2 { margin-top: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .link-row { color: var(--gold); font-weight: 700; font-size: 13px; }
+
+@media (max-width: 768px) {
+  nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  }
+  nav a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  nav .nav-sep {
+    width: 100%;
+    height: 1px;
+    margin: 6px 0;
+  }
+  main {
+    padding: 20px 16px calc(48px + env(safe-area-inset-bottom));
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar input,
+  .toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+  button,
+  .btn,
+  .btn-sm,
+  button.btn-sm {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}

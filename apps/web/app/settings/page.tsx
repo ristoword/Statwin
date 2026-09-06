@@ -1,3 +1,4 @@
+import { IosInstallNote } from '../../components/ios-install-note';
 import { PageHero } from '../../components/page-hero';
 
 export default function SettingsPage() {
@@ -6,6 +7,7 @@ export default function SettingsPage() {
       <PageHero kicker="Governance" title="Impostazioni">
         <p>Trasparenza, età e limiti del prodotto. STATWIN non accetta scommesse.</p>
       </PageHero>
+      <IosInstallNote />
       <div className="card">
         <h3>Gioco responsabile</h3>
         <p>
