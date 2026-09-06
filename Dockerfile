@@ -10,7 +10,7 @@ COPY packages/config/package.json packages/config/
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/statistics/package.json packages/statistics/
 COPY packages/ui/package.json packages/ui/
-RUN npm ci
+RUN npm ci --include=dev
 
 FROM node:20-alpine AS build
 RUN apk add --no-cache openssl libc6-compat
