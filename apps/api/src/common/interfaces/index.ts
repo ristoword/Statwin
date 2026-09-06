@@ -3,4 +3,6 @@ export interface AuthenticatedUser {
   email: string;
   role: string;
   plan: string;
+  storedPlan?: string;
+  trialEndsAt?: Date | string | null;
 }

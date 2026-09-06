@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AppPlan } from '../enums/roles.enum';
+import { effectivePlan, hasMinPlan } from '../../subscriptions/plan-limits';
 
 export const PLANS_KEY = 'plans';
 
@@ -16,11 +17,14 @@ export class PlanGuard implements CanActivate {
     if (!required?.length) {
       return true;
     }
-    const { user } = context.switchToHttp().getRequest<{ user?: { plan?: AppPlan } }>();
-    const rank: Record<string, number> = { FREE: 0, PREMIUM: 1, PRO: 2 };
-    const userRank = rank[user?.plan ?? 'FREE'] ?? 0;
-    const needed = Math.min(...required.map((plan) => rank[plan] ?? 99));
-    if (userRank < needed) {
+    const { user } = context.switchToHttp().getRequest<{
+      user?: { plan?: AppPlan | string; storedPlan?: string; trialEndsAt?: Date | string | null };
+    }>();
+    const plan = effectivePlan(user?.storedPlan ?? user?.plan, user?.trialEndsAt);
+    const needed = required.reduce((lowest, candidate) =>
+      hasMinPlan(lowest, candidate) ? candidate : lowest,
+    );
+    if (!hasMinPlan(plan, needed)) {
       throw new ForbiddenException('Piano di abbonamento insufficiente per questa funzione.');
     }
     return true;

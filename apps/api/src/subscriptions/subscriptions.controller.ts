@@ -18,6 +18,6 @@ export class SubscriptionsController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   me(@CurrentUser() user: { id: string }) {
-    return this.subscriptions.getByUser(user.id);
+    return this.subscriptions.getMe(user.id);
   }
 }

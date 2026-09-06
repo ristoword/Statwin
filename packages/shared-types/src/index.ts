@@ -6,6 +6,8 @@ export interface PublicUser {
   email: string;
   role: UserRole;
   plan: SubscriptionPlan;
+  effectivePlan?: SubscriptionPlan;
+  trialEndsAt?: string | null;
 }
 
 export interface Sport {

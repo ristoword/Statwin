@@ -14,6 +14,7 @@ import type { RequestMeta } from '../audit/request-meta';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { normalizePhone } from './phone';
+import { effectivePlan, trialEndDate } from '../subscriptions/plan-limits';
 
 @Injectable()
 export class UsersService {
@@ -53,7 +54,7 @@ export class UsersService {
         acceptedTermsAt: new Date(),
         acceptedDisclaimerAt: new Date(),
         subscription: {
-          create: { plan: 'FREE' },
+          create: { plan: 'FREE', trialEndsAt: trialEndDate() },
         },
       },
       include: { subscription: true },
@@ -66,7 +67,12 @@ export class UsersService {
       throw new NotFoundException('Utente non trovato.');
     }
     const { passwordHash, passwordResetToken, emailVerifyToken, ...safe } = user;
-    return safe;
+    const trialEndsAt = user.subscription?.trialEndsAt ?? null;
+    return {
+      ...safe,
+      trialEndsAt,
+      effectivePlan: effectivePlan(user.subscription?.plan, trialEndsAt),
+    };
   }
 
   async updateMe(id: string, dto: UpdateMeDto, meta: RequestMeta = {}) {

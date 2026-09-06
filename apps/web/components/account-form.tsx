@@ -10,7 +10,9 @@ export type AccountProfile = {
   phone?: string | null;
   firstName?: string | null;
   role: string;
-  subscription?: { plan: string; status: string } | null;
+  subscription?: { plan: string; status: string; trialEndsAt?: string | null } | null;
+  trialEndsAt?: string | null;
+  effectivePlan?: string;
 };
 
 export function AccountForm({

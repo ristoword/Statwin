@@ -6,6 +6,7 @@ import { apiGet } from '../../lib/api';
 import { clearTokens, getAccessToken } from '../../lib/auth-storage';
 import { AccountForm, type AccountProfile } from '../../components/account-form';
 import { SportsGrid } from '../../components/sports-grid';
+import { trialUntilLabel } from '../../lib/trial';
 
 type Profile = AccountProfile;
 
@@ -36,6 +37,11 @@ export default function DashboardPage() {
       .catch(() => setFootball({ note: 'API calcio non disponibile' }));
   }, []);
 
+  const trialLabel = trialUntilLabel(
+    profile?.trialEndsAt ?? profile?.subscription?.trialEndsAt,
+    profile?.subscription?.plan,
+  );
+
   return (
     <>
       <p className="kicker">Control room</p>
@@ -55,7 +61,8 @@ export default function DashboardPage() {
                 {profile.firstName || profile.email}
               </h3>
               <p>
-                Piano <strong>{profile.subscription?.plan ?? 'FREE'}</strong> · {profile.role}
+                Piano <strong>{profile.subscription?.plan ?? 'FREE'}</strong>
+                {trialLabel ? ` · ${trialLabel}` : null} · {profile.role}
               </p>
               {profile.phone ? <p className="muted">Tel. {profile.phone}</p> : null}
               <p>

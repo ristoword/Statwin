@@ -4,16 +4,29 @@ import { useEffect, useState } from 'react';
 import { apiGet } from '../lib/api';
 import { getAccessToken } from '../lib/auth-storage';
 import { SubscribeButton } from './subscribe-button';
+import { trialUntilLabel } from '../lib/trial';
 
 type Plan = {
   plan: string;
   limits?: Record<string, boolean | number>;
   layers?: string[];
   priceCents?: number;
+  copy?: string;
+};
+
+type SubscriptionMe = {
+  plan?: string;
+  trialEndsAt?: string | null;
+  effectivePlan?: string;
 };
 
 const COPY: Record<string, { title: string; price: string; blurb: string; featured?: boolean }> = {
-  FREE: { title: 'Free', price: '0', blurb: 'DATI e STATISTICHE di base per entrare nel desk.' },
+  FREE: {
+    title: 'Free',
+    price: '0',
+    blurb:
+      '15 giorni Pro per capire l’app (AI e probabilità), poi solo DATI e STATISTICHE se non ti abboni. Non promette vincite.',
+  },
   PREMIUM: {
     title: 'Premium',
     price: '6,99',
@@ -25,20 +38,27 @@ const COPY: Record<string, { title: string; price: string; blurb: string; featur
 
 export function PlanGrid({ plans }: { plans: Plan[] }) {
   const [current, setCurrent] = useState<string | null>(null);
+  const [trialLabel, setTrialLabel] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
     if (!token) return;
-    apiGet<{ plan?: string }>('/subscriptions/me', token)
-      .then((sub) => setCurrent(sub.plan ?? 'FREE'))
+    apiGet<SubscriptionMe>('/subscriptions/me', token)
+      .then((sub) => {
+        setCurrent(sub.plan ?? 'FREE');
+        setTrialLabel(trialUntilLabel(sub.trialEndsAt, sub.plan));
+      })
       .catch(() => setCurrent('FREE'));
   }, []);
 
   return (
-    <div className="grid">
+    <>
+      {trialLabel ? <p className="disclaimer">{trialLabel}</p> : null}
+      <div className="grid">
       {plans.map((item) => {
         const copy = COPY[item.plan] ?? { title: item.plan, price: '—', blurb: '' };
         const layers = item.layers?.join(' · ');
+        const blurb = item.copy ?? copy.blurb;
         return (
           <div className={`card${copy.featured ? ' featured' : ''}`} key={item.plan}>
             <span className="badge badge-prob">{item.plan}</span>
@@ -47,7 +67,7 @@ export function PlanGrid({ plans }: { plans: Plan[] }) {
             <p className="price">
               {copy.price}€<span> /mese</span>
             </p>
-            <p>{copy.blurb}</p>
+            <p>{blurb}</p>
             {layers ? <p className="muted">{layers}</p> : null}
             {item.plan === 'FREE' ? (
               <p className="muted">Incluso alla registrazione.</p>
@@ -61,6 +81,7 @@ export function PlanGrid({ plans }: { plans: Plan[] }) {
           </div>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 }

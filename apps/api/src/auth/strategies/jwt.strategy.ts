@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../../users/users.service';
+import { effectivePlan } from '../../subscriptions/plan-limits';
 
 export type JwtPayload = {
   sub: string;
@@ -28,11 +29,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || !user.isActive) {
       throw new UnauthorizedException();
     }
+    const trialEndsAt = user.subscription?.trialEndsAt ?? null;
     return {
       id: user.id,
       email: user.email,
       role: user.role,
-      plan: user.subscription?.plan ?? 'FREE',
+      plan: effectivePlan(user.subscription?.plan, trialEndsAt),
+      storedPlan: user.subscription?.plan ?? 'FREE',
+      trialEndsAt,
     };
   }
 }

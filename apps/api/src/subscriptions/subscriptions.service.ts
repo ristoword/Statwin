@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { catalogPlans, PLAN_LIMITS } from './plan-limits';
+import { catalogPlans, effectivePlan, PLAN_LIMITS } from './plan-limits';
 import { AppPlan } from '../common/enums/roles.enum';
 
 @Injectable()
@@ -14,6 +14,18 @@ export class SubscriptionsService {
 
   getByUser(userId: string) {
     return this.prisma.subscription.findUnique({ where: { userId } });
+  }
+
+  async getMe(userId: string) {
+    const subscription = await this.getByUser(userId);
+    if (!subscription) {
+      return null;
+    }
+    return {
+      ...subscription,
+      trialEndsAt: subscription.trialEndsAt,
+      effectivePlan: effectivePlan(subscription.plan, subscription.trialEndsAt),
+    };
   }
 
   async activate(userId: string, plan: SubscriptionPlan) {

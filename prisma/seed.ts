@@ -61,6 +61,8 @@ async function main() {
     });
   }
 
+  // Catalog labels only. Copy lives in listPlans: Free includes 15 giorni Pro
+  // per capire l'app, then DATI/STATISTICHE unless they subscribe. No winnings promised.
   const plans = [
     { slug: 'free', name: 'Free' },
     { slug: 'premium', name: 'Premium' },
