@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
       const role = tokens.role ?? readJwtRole(tokens.accessToken);
       if (role !== 'ADMIN') {
         setError(
-          'Questo account non è un amministratore. Accedi dalla web app (porta 3000), non dalla control room.',
+          'Questo account non è un amministratore. Accedi dalla web app, non dalla control room.',
         );
         return;
       }

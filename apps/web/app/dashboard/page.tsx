@@ -165,14 +165,9 @@ export default function DashboardPage() {
             sull’admin, non su questa dashboard pubblica.
           </p>
           <p>
-            <a
-              className="btn"
-              href={process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:3002'}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <Link className="btn" href="/admin">
               Apri control room
-            </a>
+            </Link>
           </p>
         </div>
       ) : null}

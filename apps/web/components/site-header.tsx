@@ -7,6 +7,7 @@ import { BrandMark } from './brand-mark';
 import { InstallAppButton } from './install-app-button';
 import { SportsNav } from './sports-nav';
 import { clearTokens, getAccessToken } from '../lib/auth-storage';
+import { readJwtRole } from '../lib/jwt-role';
 
 const LINKS = [
   { href: '/football', label: 'Calcio' },
@@ -22,12 +23,16 @@ export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
-      setAuthed(Boolean(getAccessToken()));
+      const token = getAccessToken();
+      setAuthed(Boolean(token));
+      setIsAdmin(readJwtRole(token) === 'ADMIN');
     } catch {
       setAuthed(false);
+      setIsAdmin(false);
     }
     setOpen(false);
   }, [pathname]);
@@ -73,12 +78,18 @@ export function SiteHeader() {
               <Link className="btn-ghost" href="/dashboard" onClick={() => setOpen(false)}>
                 Desk
               </Link>
+              {isAdmin ? (
+                <Link className="btn-ghost" href="/admin" onClick={() => setOpen(false)}>
+                  Control room
+                </Link>
+              ) : null}
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => {
                   clearTokens();
                   setAuthed(false);
+                  setIsAdmin(false);
                   setOpen(false);
                 }}
               >

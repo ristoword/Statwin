@@ -50,7 +50,7 @@ docker compose --profile full up --build
 
 ## Deploy su Railway
 
-Il servizio pubblico è pensato per **https://statwin-production.up.railway.app**. Un solo servizio avvia web (porta `$PORT`) e API interna (`127.0.0.1:3001`). Il frontend proxya `/api` e `/docs` verso l'API.
+Il servizio pubblico è pensato per **https://statwin-production.up.railway.app**. Un solo servizio avvia web (porta `$PORT`) e API interna (`127.0.0.1:3001`). Il frontend proxya `/api` e `/docs` verso l'API. La **Control Room** è sulla stessa origine: **https://statwin-production.up.railway.app/admin** (mai localhost).
 
 ### 1. Plugin nel progetto Railway
 
@@ -71,7 +71,7 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `REDIS_URL` | `${{Redis.REDIS_URL}}` |
 | `REDIS_PRIVATE_URL` | `${{Redis.REDIS_PRIVATE_URL}}` |
 | `FRONTEND_URL` | `https://statwin-production.up.railway.app` |
-| `ADMIN_URL` | `https://statwin-production.up.railway.app` |
+| `ADMIN_URL` | `https://statwin-production.up.railway.app` (CORS; la UI admin è `/admin`) |
 | `API_INTERNAL_URL` | `http://127.0.0.1:3001` |
 | `SEED_ON_BOOT` | `true` per upsertare l'admin ufficiale (non cancella gli account clienti). Poi `false` se non vuoi riscrivere la password ad ogni boot. |
 | `ADMIN_EMAIL` | `basilepaolo@me.com` |

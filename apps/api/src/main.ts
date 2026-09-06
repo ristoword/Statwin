@@ -64,7 +64,7 @@ function allowedOrigins(): Set<string> {
   return new Set(
     [
       process.env.FRONTEND_URL ?? 'http://localhost:3000',
-      process.env.ADMIN_URL ?? 'http://localhost:3002',
+      process.env.ADMIN_URL ?? process.env.FRONTEND_URL ?? 'http://localhost:3002',
       railwayPublic,
       ...extras,
     ].filter((value): value is string => Boolean(value)),
