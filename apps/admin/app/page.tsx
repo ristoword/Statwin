@@ -1,40 +1,75 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { apiGet } from '../lib/api';
-
-type Health = { status: string; checks?: { database: string; redis: string } };
-type Sport = { slug: string; name: string; isActive: boolean };
-type Overview = { users?: number; sports?: Sport[] };
+import { useAdminToken } from '../lib/session';
+import { actionLabel, formatDateTime } from '../lib/format';
+import type { Overview } from '../lib/types';
 
 export default function AdminHome() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [sports, setSports] = useState<Sport[]>([]);
-  const [overview, setOverview] = useState<Overview | null>(null);
+  const { token, ready } = useAdminToken();
+  const [data, setData] = useState<Overview | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    apiGet<Health>('/health').then(setHealth).catch(() => setHealth({ status: 'down' }));
-    apiGet<Sport[]>('/sports').then((data) => setSports(Array.isArray(data) ? data : [])).catch(() => setSports([]));
-    const token = localStorage.getItem('statwin.admin.token');
-    if (token) {
-      apiGet<Overview>('/admin/overview', token).then(setOverview).catch(() => setOverview(null));
-    }
-  }, []);
+    if (!token) return;
+    apiGet<Overview>('/admin/overview', token)
+      .then(setData)
+      .catch((err: Error) => setError(err.message));
+  }, [token]);
+
+  if (!ready) return null;
 
   return (
     <div>
-      <h1>STATWIN Admin</h1>
-      <div className="card">
-        <p>Stato API: {health?.status ?? 'sconosciuto'}</p>
-        <p>Database: {health?.checks?.database ?? 'n/d'} · Redis: {health?.checks?.redis ?? 'n/d'}</p>
-        {overview?.users != null ? <p>Utenti: {overview.users}</p> : <p><a href="/login">Login admin</a> per i conteggi protetti.</p>}
+      <div className="page-head">
+        <div>
+          <h1>Account</h1>
+          <p className="lede">
+            Control room account: chi accede, con quale piano e quando. Nessuna impersonazione —
+            operazioni solo via API admin.
+          </p>
+        </div>
+        <Link className="btn" href="/users/new">Crea account PRO</Link>
       </div>
+      {error ? <p className="error">{error}</p> : null}
       <div className="grid">
-        {sports.map((sport) => (
-          <div className="card" key={sport.slug}>
-            {sport.name} {sport.isActive ? '(attivo)' : '(predisposto)'}
-          </div>
-        ))}
+        <div className="kpi"><span>Utenti</span><strong>{data?.users ?? '—'}</strong></div>
+        <div className="kpi"><span>PRO</span><strong>{data?.plans?.PRO ?? '—'}</strong></div>
+        <div className="kpi"><span>Premium</span><strong>{data?.plans?.PREMIUM ?? '—'}</strong></div>
+        <div className="kpi"><span>Free</span><strong>{data?.plans?.FREE ?? '—'}</strong></div>
+        <div className="kpi"><span>Bloccati</span><strong>{data?.blocked ?? '—'}</strong></div>
+        <div className="kpi"><span>Login 24h</span><strong>{data?.logins24h ?? '—'}</strong></div>
+      </div>
+      <h2>Accessi recenti</h2>
+      <div className="table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>Azione</th>
+              <th>Utente</th>
+              <th>Attore</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.recentAudit ?? []).length === 0 ? (
+              <tr><td colSpan={5}>Nessun evento di accesso.</td></tr>
+            ) : (
+              data?.recentAudit.map((row) => (
+                <tr key={row.id}>
+                  <td>{formatDateTime(row.createdAt)}</td>
+                  <td>{actionLabel(row.action)}</td>
+                  <td>{row.user?.email ?? '—'}</td>
+                  <td>{row.actor?.email ?? '—'}</td>
+                  <td>{row.ip ?? '—'}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

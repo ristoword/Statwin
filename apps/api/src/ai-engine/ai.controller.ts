@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsObject, IsOptional, IsString } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
@@ -11,6 +11,10 @@ import { RequiresPlan } from '../common/decorators/requires-plan.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AppPlan } from '../common/enums/roles.enum';
 import { hasMinPlan } from '../subscriptions/plan-limits';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit.constants';
+import { requestMeta } from '../audit/request-meta';
+import type { Request } from 'express';
 
 class AnalyzeDto {
   @IsOptional()
@@ -37,7 +41,10 @@ class AnalyzeDto {
 @ApiTags('ai')
 @Controller({ path: 'ai', version: '1' })
 export class AiController {
-  constructor(private readonly ai: AiEngineService) {}
+  constructor(
+    private readonly ai: AiEngineService,
+    private readonly audit: AuditService,
+  ) {}
 
   @Get('status')
   status() {
@@ -78,14 +85,26 @@ export class AiController {
   @RequiresPlan('PRO')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('analyze')
-  analyze(@Body() dto: AnalyzeDto) {
-    return this.ai.analyzeRequest({
+  async analyze(
+    @Body() dto: AnalyzeDto,
+    @CurrentUser() user: { id: string },
+    @Req() req: Request,
+  ) {
+    const result = await this.ai.analyzeRequest({
       matchId: dto.matchId,
       eventId: dto.eventId,
       sport: dto.sport,
       context: dto.context,
       force: dto.force,
     });
+    await this.audit.record({
+      action: AuditAction.FEATURE_AI_ANALYZE,
+      userId: user.id,
+      actorId: user.id,
+      metadata: { matchId: dto.matchId, eventId: dto.eventId, sport: dto.sport },
+      ...requestMeta(req),
+    });
+    return result;
   }
 
   @Post('jobs/run')

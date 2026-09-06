@@ -13,15 +13,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <img src="/logo.png" alt="" width={28} height={28} />
             STATWIN Admin
           </Link>
-          <Link href="/">Overview</Link>
-          <Link href="/users">Utenti</Link>
-          <Link href="/subscriptions">Abbonamenti</Link>
-          <Link href="/payments">Pagamenti</Link>
-          <Link href="/sports">Sport</Link>
-          <Link href="/providers">Provider</Link>
-          <Link href="/jobs">Jobs</Link>
-          <Link href="/ai-reports">AI reports</Link>
-          <Link href="/logs">Logs</Link>
+          <Link className="nav-core" href="/">Account</Link>
+          <Link className="nav-core" href="/users">Utenti</Link>
+          <Link className="nav-core" href="/audit">Accessi</Link>
+          <Link className="nav-core" href="/subscriptions">Piani</Link>
+          <Link className="nav-core" href="/payments">Pagamenti</Link>
+          <span className="nav-sep" aria-hidden="true" />
+          <Link className="nav-aux" href="/sports">Sport</Link>
+          <Link className="nav-aux" href="/jobs">Jobs</Link>
+          <Link className="nav-aux" href="/ai-reports">AI</Link>
+          <Link className="nav-aux" href="/logs">Logs</Link>
           <Link href="/login">Login</Link>
         </nav>
         <main>{children}</main>

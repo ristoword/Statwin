@@ -32,6 +32,7 @@ model User {
   dateOfBirth           DateTime?
   acceptedTermsAt       DateTime?
   acceptedDisclaimerAt  DateTime?
+  lastLoginAt           DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -41,10 +42,33 @@ model User {
   notifications  Notification[]
   predictions    Prediction[]
   aiReports      AIReport[]
+  auditEvents    AuditLog[]     @relation("AuditSubject")
+  actorEvents    AuditLog[]     @relation("AuditActor")
 
   @@index([email])
   @@index([role])
+  @@index([lastLoginAt])
   @@map("users")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation("AuditSubject", fields: [userId], references: [id], onDelete: SetNull)
+  actorId   String?
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action    String
+  ip        String?
+  userAgent String?
+  path      String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model RefreshToken {

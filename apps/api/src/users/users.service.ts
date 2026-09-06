@@ -59,8 +59,11 @@ export class UsersService {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         role: true,
         isActive: true,
+        lastLoginAt: true,
         createdAt: true,
         subscription: { select: { plan: true, status: true } },
       },

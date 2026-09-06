@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { apiGet } from '../../lib/api';
+import { useAdminToken } from '../../lib/session';
+import { formatDate } from '../../lib/format';
 
 type Sub = {
   id: string;
@@ -12,37 +14,50 @@ type Sub = {
 };
 
 export default function Page() {
+  const { token, ready } = useAdminToken();
   const [items, setItems] = useState<Sub[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('statwin.admin.token');
-    if (!token) {
-      setError('Login admin richiesto.');
-      return;
-    }
+    if (!token) return;
     apiGet<Sub[]>('/admin/subscriptions', token)
       .then((data) => setItems(Array.isArray(data) ? data : []))
-      .catch(() => setError('Abbonamenti non disponibili.'));
-  }, []);
+      .catch((err: Error) => setError(err.message));
+  }, [token]);
+
+  if (!ready) return null;
 
   return (
     <div>
-      <h1>Abbonamenti</h1>
-      {error ? <p>{error}</p> : null}
-      {items.length === 0 ? (
-        <div className="card">Nessun abbonamento.</div>
-      ) : (
-        items.map((item) => (
-          <div className="card" key={item.id}>
-            <h3>{item.user?.email ?? 'Account'}</h3>
-            <p>
-              {item.plan} · {item.status}
-              {item.currentPeriodEnd ? ` · fino al ${new Date(item.currentPeriodEnd).toLocaleDateString('it-IT')}` : ''}
-            </p>
-          </div>
-        ))
-      )}
+      <h1>Piani</h1>
+      <p className="lede">Abbonamenti attivi e periodo. Per assegnare un piano usa la sezione Utenti.</p>
+      {error ? <p className="error">{error}</p> : null}
+      <div className="table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Account</th>
+              <th>Piano</th>
+              <th>Stato</th>
+              <th>Fino al</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr><td colSpan={4}>Nessun abbonamento.</td></tr>
+            ) : (
+              items.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.user?.email ?? 'Account'}</td>
+                  <td><span className="badge badge-plan">{item.plan}</span></td>
+                  <td>{item.status}</td>
+                  <td>{item.currentPeriodEnd ? formatDate(item.currentPeriodEnd) : '—'}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

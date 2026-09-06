@@ -10,6 +10,9 @@ import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { UsersService } from '../../users/users.service';
+import { AuditService } from '../../audit/audit.service';
+import { AuditAction } from '../../audit/audit.constants';
+import type { RequestMeta } from '../../audit/request-meta';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 
@@ -20,6 +23,7 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly audit: AuditService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -40,15 +44,39 @@ export class AuthService {
     return this.issueTokens(user.id, user.email, user.role);
   }
 
-  async login(dto: LoginDto) {
-    const user = await this.users.findByEmail(dto.email);
-    if (!user) {
+  async login(dto: LoginDto, meta: RequestMeta = {}) {
+    const email = dto.email.trim();
+    const user = await this.users.findByEmail(email);
+    if (!user || !user.isActive) {
+      await this.audit.record({
+        action: AuditAction.LOGIN_FAIL,
+        userId: user?.id,
+        metadata: { email, reason: user && !user.isActive ? 'blocked' : 'unknown' },
+        ...meta,
+      });
       throw new UnauthorizedException('Credenziali non valide.');
     }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) {
+      await this.audit.record({
+        action: AuditAction.LOGIN_FAIL,
+        userId: user.id,
+        metadata: { email, reason: 'invalid_password' },
+        ...meta,
+      });
       throw new UnauthorizedException('Credenziali non valide.');
     }
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+    await this.audit.record({
+      action: AuditAction.LOGIN_SUCCESS,
+      userId: user.id,
+      actorId: user.id,
+      metadata: { email },
+      ...meta,
+    });
     return this.issueTokens(user.id, user.email, user.role);
   }
 
@@ -67,11 +95,22 @@ export class AuthService {
     return this.issueTokens(stored.user.id, stored.user.email, stored.user.role);
   }
 
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string, meta: RequestMeta = {}) {
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+    });
     await this.prisma.refreshToken.updateMany({
       where: { token: refreshToken },
       data: { revoked: true },
     });
+    if (stored) {
+      await this.audit.record({
+        action: AuditAction.LOGOUT,
+        userId: stored.userId,
+        actorId: stored.userId,
+        ...meta,
+      });
+    }
     return { success: true };
   }
 

@@ -26,11 +26,27 @@ export function apiV1(): string {
 export const API_ORIGIN = getApiOrigin();
 export const API_V1 = apiV1();
 
+async function readError(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: unknown; message?: unknown };
+    const raw = body.error ?? body.message;
+    if (typeof raw === 'string') return raw;
+    if (raw && typeof raw === 'object' && 'message' in raw) {
+      const message = (raw as { message: unknown }).message;
+      if (Array.isArray(message)) return message.join(', ');
+      if (typeof message === 'string') return message;
+    }
+  } catch {
+    /* ignore */
+  }
+  return `Errore API ${res.status}`;
+}
+
 export async function apiGet<T>(path: string, token?: string): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${apiV1()}${path}`, { cache: 'no-store', headers });
-  if (!res.ok) throw new Error(`Errore API ${res.status}`);
+  if (!res.ok) throw new Error(await readError(res));
   return res.json() as Promise<T>;
 }
 
@@ -45,7 +61,7 @@ export async function apiPatch<T>(path: string, body: unknown, token?: string): 
     headers,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Errore API ${res.status}`);
+  if (!res.ok) throw new Error(await readError(res));
   return res.json() as Promise<T>;
 }
 
@@ -60,6 +76,6 @@ export async function apiPost<T>(path: string, body: unknown, token?: string): P
     headers,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Errore API ${res.status}`);
+  if (!res.ok) throw new Error(await readError(res));
   return res.json() as Promise<T>;
 }

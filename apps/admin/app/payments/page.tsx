@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { apiGet } from '../../lib/api';
+import { useAdminToken } from '../../lib/session';
+import { formatDateTime } from '../../lib/format';
 
 type Payment = {
   id: string;
@@ -13,37 +15,52 @@ type Payment = {
 };
 
 export default function Page() {
+  const { token, ready } = useAdminToken();
   const [items, setItems] = useState<Payment[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('statwin.admin.token');
-    if (!token) {
-      setError('Login admin richiesto.');
-      return;
-    }
+    if (!token) return;
     apiGet<Payment[]>('/admin/payments', token)
       .then((data) => setItems(Array.isArray(data) ? data : []))
-      .catch(() => setError('Pagamenti non disponibili.'));
-  }, []);
+      .catch((err: Error) => setError(err.message));
+  }, [token]);
+
+  if (!ready) return null;
 
   return (
     <div>
       <h1>Pagamenti</h1>
-      {error ? <p>{error}</p> : null}
-      {items.length === 0 ? (
-        <div className="card">Nessun pagamento.</div>
-      ) : (
-        items.map((item) => (
-          <div className="card" key={item.id}>
-            <h3>{item.user?.email ?? 'Account'}</h3>
-            <p>
-              {item.plan} · {(item.amountCents / 100).toFixed(0)}€ · {item.status} ·{' '}
-              {new Date(item.createdAt).toLocaleString('it-IT')}
-            </p>
-          </div>
-        ))
-      )}
+      <p className="lede">Movimenti registrati. STATWIN è analytics, non un bookmaker.</p>
+      {error ? <p className="error">{error}</p> : null}
+      <div className="table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>Account</th>
+              <th>Piano</th>
+              <th>Importo</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr><td colSpan={5}>Nessun pagamento.</td></tr>
+            ) : (
+              items.map((item) => (
+                <tr key={item.id}>
+                  <td>{formatDateTime(item.createdAt)}</td>
+                  <td>{item.user?.email ?? 'Account'}</td>
+                  <td>{item.plan}</td>
+                  <td>{(item.amountCents / 100).toFixed(0)}€</td>
+                  <td>{item.status}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

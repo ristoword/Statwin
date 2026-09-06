@@ -83,6 +83,27 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {profile?.role === 'ADMIN' ? (
+        <div className="card">
+          <span className="badge badge-ai">ADMIN</span>
+          <h3>Account / Control room</h3>
+          <p>
+            Sala operativa account: crea PRO, blocca utenti, accessi e password. Il CRUD resta
+            sull’admin, non su questa dashboard pubblica.
+          </p>
+          <p>
+            <a
+              className="btn"
+              href={process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:3002'}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Apri control room
+            </a>
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid">
         <div className="card stat">
           <span className="badge badge-data">DATI</span>
