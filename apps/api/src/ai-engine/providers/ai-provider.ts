@@ -9,6 +9,10 @@ export type AIContext = {
   lineups?: unknown;
   odds?: unknown;
   history?: unknown;
+  match?: unknown;
+  probabilities?: unknown;
+  events?: unknown;
+  [key: string]: unknown;
 };
 
 export type AIReportResult = {
@@ -16,10 +20,14 @@ export type AIReportResult = {
   analysis: string;
   favorable: string[];
   unfavorable: string[];
+  missingData?: string[];
   usedSources: string[];
   disclaimer: string;
+  model?: string;
+  provider?: string;
 };
 
 export interface AIProvider {
+  readonly configured: boolean;
   analyzeMatch(context: AIContext): Promise<AIReportResult>;
 }

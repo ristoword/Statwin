@@ -20,11 +20,12 @@ export class MatchesController {
     }
     return {
       disclaimer:
-        'STATWIN fornisce analisi statistiche. Distingui DATI, STATISTICHE, PROBABILITÀ e ANALISI AI.',
+        'STATWIN fornisce analisi statistiche. Distingui DATI, STATISTICHE, PROBABILITÀ e ANALISI AI. 18+.',
       data: match,
       statistics: null,
       probabilities: match.predictions,
       aiAnalysis: match.aiReports,
+      analysisUrl: `/api/v1/ai/matches/${match.id}`,
     };
   }
 }

@@ -1,0 +1,41 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiPost } from '../lib/api';
+
+export function GenerateAiButton({
+  matchId,
+  force = false,
+  label = 'Genera analisi AI',
+}: {
+  matchId: string;
+  force?: boolean;
+  label?: string;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function run() {
+    setBusy(true);
+    setError('');
+    try {
+      await apiPost('/ai/analyze', { matchId, force });
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analisi non riuscita');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <button type="button" onClick={run} disabled={busy}>
+        {busy ? 'Analisi in corso…' : label}
+      </button>
+      {error ? <p className="disclaimer">{error}</p> : null}
+    </div>
+  );
+}

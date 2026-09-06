@@ -59,6 +59,10 @@ export class AdminService {
   }
 
   aiReports() {
-    return this.prisma.aIReport.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+    return this.prisma.aIReport.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { match: { include: { homeTeam: true, awayTeam: true } } },
+    });
   }
 }

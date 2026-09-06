@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { AiEngineModule } from '../ai-engine/ai-engine.module';
 import { DataProvidersModule } from '../data-providers/data-providers.module';
 import { OddsProvidersModule } from '../odds-providers/odds-providers.module';
 import { FootballModule } from '../sports/football/football.module';
@@ -12,6 +13,7 @@ import { AiReportsProcessor } from './ai-reports/ai-reports.processor';
 
 @Module({
   imports: [
+    AiEngineModule,
     DataProvidersModule,
     OddsProvidersModule,
     FootballModule,

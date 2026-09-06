@@ -78,6 +78,13 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `OPENLIGADB_BASE_URL` | `https://api.openligadb.de` |
 | `OPENLIGADB_SEASON` | `2026` |
 | `OPENLIGADB_LEAGUES` | `bl1` |
+| `OPENAI_API_KEY` | chiave OpenAI (solo Railway / `.env` locale) |
+| `OPENAI_MODEL` | `gpt-4o` |
+| `OPENAI_MAX_TOKENS` | `1024` |
+| `OPENAI_TEMPERATURE` | `0.7` |
+| `AI_DEFAULT_PROVIDER` | `openai` |
+| `AI_DEFAULT_MODEL` | `gpt-4o` |
+| `AI_SCHEDULER_TOKEN` | token per i job AI schedulati |
 
 Dopo il primo boot (seed admin `admin@statwin.local` / `ChangeMeAdmin1!`) sincronizza i dati calcio:
 
