@@ -196,7 +196,7 @@ function addTsdEvents(target: Map<string, TsdEvent>, events?: TsdEvent[] | null)
 }
 
 /**
- * Season archive (first non-empty candidate) plus upcoming league fixtures.
+ * Upcoming league fixtures first, then the first non-empty season archive.
  * Never invents events: empty provider responses stay empty.
  */
 export async function collectTsdLeagueEvents(
@@ -206,7 +206,17 @@ export async function collectTsdLeagueEvents(
 ): Promise<TsdEvent[]> {
   const byId = new Map<string, TsdEvent>();
 
-  for (const season of seasons) {
+  try {
+    const upcoming = await getJson<{ events?: TsdEvent[] | null }>(
+      `/eventsnextleague.php?id=${encodeURIComponent(leagueId)}`,
+    );
+    addTsdEvents(byId, upcoming.events);
+  } catch {
+    /* keep going with the season archive */
+  }
+
+  const seasonsToTry = byId.size > 0 ? seasons.slice(0, 1) : seasons;
+  for (const season of seasonsToTry) {
     try {
       const payload = await getJson<{ events?: TsdEvent[] | null }>(
         `/eventsseason.php?id=${encodeURIComponent(leagueId)}&s=${encodeURIComponent(season)}`,
@@ -218,15 +228,6 @@ export async function collectTsdLeagueEvents(
     } catch {
       /* try the next season label */
     }
-  }
-
-  try {
-    const upcoming = await getJson<{ events?: TsdEvent[] | null }>(
-      `/eventsnextleague.php?id=${encodeURIComponent(leagueId)}`,
-    );
-    addTsdEvents(byId, upcoming.events);
-  } catch {
-    /* keep season events only */
   }
 
   return [...byId.values()];

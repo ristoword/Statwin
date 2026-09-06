@@ -1,6 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import { parseLeagueFilter } from '../../../data-providers/football/european-leagues';
 import { FootballService } from '../football.service';
 import { FootballSyncService } from '../football-sync.service';
 import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
@@ -18,8 +19,8 @@ export class FootballController {
 
   @Post('sync')
   @SkipThrottle()
-  runSync() {
-    return this.sync.syncAll();
+  runSync(@Query('league') league?: string) {
+    return this.sync.syncAll(parseLeagueFilter(league));
   }
 
   @Get()

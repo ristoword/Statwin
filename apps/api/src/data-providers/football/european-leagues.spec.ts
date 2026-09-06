@@ -1,4 +1,9 @@
-import { inferFootballCountry, mergeLeagueIds, prioritizeFootballCompetitions } from './european-leagues';
+import {
+  inferFootballCountry,
+  mergeLeagueIds,
+  prioritizeFootballCompetitions,
+  selectFootballCompetitions,
+} from './european-leagues';
 
 describe('european football leagues', () => {
   it('keeps a short Railway list from dropping the European catalog', () => {
@@ -27,5 +32,15 @@ describe('european football leagues', () => {
       'Championship',
       'Scottish Premiership',
     ]);
+  });
+
+  it('filters a targeted Serie A sync by id or name', () => {
+    const pool = [
+      { name: 'Premier League', shortcut: '4328' },
+      { name: 'Serie A', externalId: 'tsd:4332' },
+      { name: 'Championship', shortcut: '4329' },
+    ];
+    expect(selectFootballCompetitions(pool, ['4332']).map((item) => item.name)).toEqual(['Serie A']);
+    expect(selectFootballCompetitions(pool, ['Serie A']).map((item) => item.name)).toEqual(['Serie A']);
   });
 });

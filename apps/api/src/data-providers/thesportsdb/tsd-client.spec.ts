@@ -28,7 +28,8 @@ describe('collectTsdLeagueEvents', () => {
     expect(events.some((event) => event.idEvent === juveMilan.idEvent)).toBe(true);
     expect(events[0]?.strHomeTeam).toBe('Juventus');
     expect(events[0]?.strAwayTeam).toBe('AC Milan');
-    expect(calls.some((path) => path.includes('eventsnextleague.php?id=4332'))).toBe(true);
+    expect(calls[0]).toContain('eventsnextleague.php?id=4332');
+    expect(calls.filter((path) => path.startsWith('/eventsseason.php'))).toHaveLength(1);
   });
 
   it('stops at the first non-empty season and still merges upcoming fixtures', async () => {
