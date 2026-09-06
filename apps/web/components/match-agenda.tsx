@@ -5,16 +5,23 @@ import type { AgendaMatch } from '../lib/agenda';
 export function MatchAgenda({
   recent,
   upcoming,
+  emptyTitle,
+  emptyBody,
 }: {
   recent: AgendaMatch[];
   upcoming: AgendaMatch[];
+  emptyTitle?: string;
+  emptyBody?: string;
 }) {
   if (recent.length === 0 && upcoming.length === 0) {
     return (
       <div className="card">
         <EmptyState
-          title="Calendario vuoto"
-          body="Quando il provider sincronizza gli incontri, ultime e prossime partite compariranno qui."
+          title={emptyTitle ?? 'Calendario vuoto'}
+          body={
+            emptyBody ??
+            'Quando il provider sincronizza gli incontri, ultime e prossime partite compariranno qui.'
+          }
         />
       </div>
     );

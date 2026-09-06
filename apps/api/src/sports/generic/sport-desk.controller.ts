@@ -41,8 +41,12 @@ export function createSportDeskController(slug: string, path = slug): Type<unkno
     @ApiBearerAuth()
     @UseGuards(OptionalJwtAuthGuard)
     @Get('matches')
-    matches(@Query('competitionId') competitionId?: string, @CurrentUser() user?: { plan?: string }) {
-      return this.desk.matches(slug, competitionId, hasMinPlan(user?.plan, AppPlan.PREMIUM));
+    matches(
+      @Query('competitionId') competitionId?: string,
+      @Query('q') q?: string,
+      @CurrentUser() user?: { plan?: string },
+    ) {
+      return this.desk.matches(slug, competitionId, hasMinPlan(user?.plan, AppPlan.PREMIUM), q);
     }
 
     @ApiBearerAuth()

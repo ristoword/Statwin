@@ -4,7 +4,7 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { FOOTBALL_DATA_PROVIDER } from '../../data-providers/data-providers.module';
 import { FootballDataProvider } from '../../data-providers/interfaces/sports-data-provider';
 import { ExternalCompetition } from '../../data-providers/interfaces/external-football';
-import { inferFootballCountry } from '../../data-providers/football/european-leagues';
+import { inferFootballCountry, prioritizeFootballCompetitions } from '../../data-providers/football/european-leagues';
 import { persistOfficialStandings } from '../generic/standings';
 
 @Injectable()
@@ -52,18 +52,23 @@ export class FootballSyncService {
       create: { slug: 'football', name: 'Calcio', isActive: true },
     });
 
-    const competitions = await this.provider.fetchCompetitions();
+    const competitions = prioritizeFootballCompetitions(await this.provider.fetchCompetitions());
     await this.backfillCountries();
     let teams = 0;
     let matches = 0;
     let standings = 0;
     const skipped: string[] = [];
+    const completed: string[] = [];
     const deadline = this.syncDeadline();
 
-    for (const competition of competitions) {
+    for (let index = 0; index < competitions.length; index += 1) {
+      const competition = competitions[index];
       if (deadline && Date.now() > deadline) {
-        skipped.push(`remaining from ${competition.name} (budget tempo)`);
-        this.logger.warn(`Sync time budget reached, skip remaining from ${competition.name}`);
+        const remaining = competitions.slice(index).map((item) => `${item.name} (budget tempo)`);
+        skipped.push(...remaining);
+        this.logger.warn(
+          `Sync time budget reached after ${completed.join(', ') || 'nessuna'}. Skip: ${remaining.join(', ')}`,
+        );
         break;
       }
       try {
@@ -71,6 +76,7 @@ export class FootballSyncService {
         teams += await this.upsertTeams(sport.id, competition);
         matches += await this.upsertMatches(sport.id, persisted.competitionId, persisted.seasonId, competition);
         standings += await this.safeStandings(sport.id, persisted.seasonId, competition);
+        completed.push(competition.name);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         skipped.push(`${competition.name}: ${message}`);
@@ -79,14 +85,14 @@ export class FootballSyncService {
     }
 
     this.logger.log(
-      `Sync ${this.provider.slug}: competitions=${competitions.length} teams=${teams} matches=${matches} standings=${standings}`,
+      `Sync ${this.provider.slug}: competitions=${competitions.length} completed=${completed.length} teams=${teams} matches=${matches} standings=${standings}`,
     );
 
     return {
       provider: this.provider.slug,
       source: this.provider.slug,
       note: skipped.length
-        ? `Solo dati restituiti dal provider. Nessun risultato inventato. Skip: ${skipped.length}.`
+        ? `Solo dati restituiti dal provider. Nessun risultato inventato. Completate: ${completed.join(', ') || 'nessuna'}. Skip: ${skipped.length}.`
         : 'Solo dati restituiti dal provider. Nessun risultato inventato.',
       imported: {
         competitions: competitions.length,
@@ -94,6 +100,7 @@ export class FootballSyncService {
         matches,
         standings,
       },
+      completed: completed.length ? completed : undefined,
       skipped: skipped.length ? skipped : undefined,
     };
   }

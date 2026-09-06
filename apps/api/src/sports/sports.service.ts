@@ -1,6 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { SPORT_CATALOG } from './sport-catalog';
+import {
+  FEATURED_UPCOMING_LIMIT,
+  GLOBAL_RECENT_LIMIT,
+  GLOBAL_UPCOMING_LIMIT,
+  featuredCompetitionWhere,
+  featuredWindow,
+  matchSearchWhere,
+  mergeFeaturedUpcoming,
+} from './match-agenda.query';
 
 @Injectable()
 export class SportsService {
@@ -38,24 +47,41 @@ export class SportsService {
     return this.prisma.sport.findUnique({ where: { slug } });
   }
 
-  async listMatches(sportSlug?: string) {
+  async listMatches(sportSlug?: string, q?: string) {
     const include = { homeTeam: true, awayTeam: true, competition: true, sport: true } as const;
     const now = new Date();
-    const where = sportSlug ? { sport: { slug: sportSlug } } : {};
-    const [upcoming, recent] = await Promise.all([
+    const search = matchSearchWhere(q);
+    const where = {
+      ...(sportSlug ? { sport: { slug: sportSlug } } : {}),
+      ...search,
+    };
+    const wantFeatured = !q?.trim();
+    const [upcoming, recent, featured] = await Promise.all([
       this.prisma.match.findMany({
         where: { ...where, kickoff: { gte: now } },
         include,
         orderBy: { kickoff: 'asc' },
-        take: 30,
+        take: GLOBAL_UPCOMING_LIMIT,
       }),
       this.prisma.match.findMany({
         where: { ...where, kickoff: { lt: now } },
         include,
         orderBy: { kickoff: 'desc' },
-        take: 30,
+        take: GLOBAL_RECENT_LIMIT,
       }),
+      wantFeatured
+        ? this.prisma.match.findMany({
+            where: {
+              ...where,
+              kickoff: featuredWindow(now),
+              ...featuredCompetitionWhere(),
+            },
+            include,
+            orderBy: { kickoff: 'asc' },
+            take: FEATURED_UPCOMING_LIMIT,
+          })
+        : Promise.resolve([]),
     ]);
-    return { recent, upcoming };
+    return { recent, upcoming: mergeFeaturedUpcoming(upcoming, featured) };
   }
 }

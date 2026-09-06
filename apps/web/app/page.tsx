@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { apiV1, apiGet } from '../lib/api';
 import { asAgenda } from '../lib/agenda';
-import { MatchAgenda } from '../components/match-agenda';
+import { SearchableAgenda } from '../components/searchable-agenda';
 import { SportsDirectory } from '../components/sports-directory';
 
 type FootballOverview = {
@@ -112,7 +112,7 @@ export default async function Home() {
       </div>
 
       <h2>Ultime e prossime</h2>
-      <MatchAgenda recent={agenda.recent} upcoming={agenda.upcoming} />
+      <SearchableAgenda recent={agenda.recent} upcoming={agenda.upcoming} />
 
       <h2 id="sport">Sport del desk</h2>
       <p className="muted">

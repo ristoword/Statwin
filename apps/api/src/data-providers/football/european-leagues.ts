@@ -89,3 +89,37 @@ export function inferFootballCountry(
   }
   return NAME_COUNTRY.find((row) => row.test.test(name))?.country;
 }
+
+type NamedCompetition = {
+  name: string;
+  shortcut?: string;
+  externalId?: string;
+};
+
+const FOOTBALL_SYNC_PRIORITY: Array<{ rank: number; test: (name: string, id: string) => boolean }> = [
+  { rank: 0, test: (name, id) => id === '4332' || /^italian serie a\b/i.test(name) || /^serie a\b/i.test(name) },
+  { rank: 1, test: (name, id) => id === '4328' || /^premier league\b/i.test(name) },
+  { rank: 2, test: (name, id) => id === '4335' || /^la liga$/i.test(name) },
+  { rank: 3, test: (name, id) => id === 'bl1' || /^1\.\s*bundesliga\b/i.test(name) || /^bundesliga$/i.test(name) },
+  { rank: 4, test: (name, id) => id === '4334' || /^ligue 1\b/i.test(name) },
+  { rank: 8, test: (name, id) => id === '4394' || /^serie b\b/i.test(name) },
+  { rank: 12, test: (name) => /uefa|champions league|europa league/i.test(name) },
+];
+
+export function footballCompetitionId(item: NamedCompetition): string {
+  return (item.shortcut || item.externalId || '').replace(/^(tsd:|oldb:)/, '');
+}
+
+/** Lower rank is synced first so a short Railway budget cannot skip Serie A. */
+export function footballSyncPriority(item: NamedCompetition): number {
+  const id = footballCompetitionId(item);
+  return FOOTBALL_SYNC_PRIORITY.find((row) => row.test(item.name, id))?.rank ?? 40;
+}
+
+export function prioritizeFootballCompetitions<T extends NamedCompetition>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const rank = footballSyncPriority(a) - footballSyncPriority(b);
+    if (rank !== 0) return rank;
+    return a.name.localeCompare(b.name, 'en');
+  });
+}

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { apiGet } from '../lib/api';
 import { asMatchDesk, type AgendaMatch } from '../lib/agenda';
@@ -10,11 +9,8 @@ import {
   sectionFor,
   type DeskCompetition,
 } from '../lib/sport-sections';
-import { AiSportPath } from './ai-sport-path';
-import { EmptyState } from './empty-state';
-import { MatchAgenda } from './match-agenda';
 import { PageHero } from './page-hero';
-import { PossibleResults } from './possible-results';
+import { SportDeskBrowser } from './sport-desk-browser';
 
 type SportOverview = {
   sport?: { name: string };
@@ -137,82 +133,26 @@ export async function SportDesk({
         </div>
       </div>
 
-      {sections.length > 0 ? (
-        <div className="card league-board nation-board">
-          <section className="league-country">
-            <p className="muted league-country-label">
-              {sport.slug === 'football' ? 'Nazioni' : 'Sezioni'}
-            </p>
-            <div className="tabs nation-tabs">
-              {sections.map((section) => {
-                const first = section.competitions[0];
-                return (
-                  <Link
-                    key={section.key}
-                    href={`${sport.href}?c=${first.id}`}
-                    className={`chip ${activeSection?.key === section.key ? 'chip-active' : 'chip-data'}`}
-                  >
-                    {section.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-          {activeSection ? (
-            <section className="league-country">
-              <p className="muted league-country-label">{activeSection.label} · competizioni</p>
-              <div className="tabs">
-                {activeSection.competitions.map((competition) => (
-                  <Link
-                    key={competition.id}
-                    href={`${sport.href}?c=${competition.id}`}
-                    className={`chip ${selectedId === competition.id ? 'chip-active' : 'chip-stats'}`}
-                  >
-                    {competition.name}
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </div>
-      ) : null}
-
-      <h2>Classifica</h2>
-      {standings.length > 0 ? (
-        <StandingsTable rows={standings} format={standingsFormat} />
-      ) : (
-        <div className="card">
-          <EmptyState
-            title={standingsNote === 'Classifica non fornita dalla fonte' ? 'Classifica non fornita dalla fonte' : 'Classifica in attesa'}
-            body={
-              standingsNote ??
-              'Nessuna tabella ufficiale in archivio per questa competizione. Non viene generata una classifica fittizia.'
-            }
-          />
-        </div>
-      )}
-
-      {emptyArchive ? (
-        <div className="card coming-panel">
-          <EmptyState
-            title={`${sport.name}: nessun dato sincronizzato`}
-            body={
-              overview.note ??
-              `L'archivio resta vuoto finché il provider non restituisce gare. Nessun punteggio viene inventato.`
-            }
-          />
-        </div>
-      ) : (
-        <MatchAgenda recent={matches.recent} upcoming={matches.upcoming} />
-      )}
-
-      <PossibleResults upcoming={matches.upcoming} locked={matches.probabilitiesLocked} />
-
-      <AiSportPath
+      <SportDeskBrowser
+        sportHref={sport.href}
         sportSlug={sport.slug}
         sportName={sport.name}
         eventNoun={sport.eventNoun}
-        matches={[...matches.upcoming, ...matches.recent]}
+        nationLabel={sport.slug === 'football' ? 'Nazioni' : 'Sezioni'}
+        sections={sections}
+        activeSectionKey={activeSection?.key}
+        selectedId={selectedId}
+        standings={standings}
+        standingsFormat={standingsFormat}
+        standingsNote={standingsNote}
+        recent={matches.recent}
+        upcoming={matches.upcoming}
+        probabilitiesLocked={matches.probabilitiesLocked}
+        emptyArchive={emptyArchive}
+        emptyArchiveBody={
+          overview.note ??
+          `L'archivio resta vuoto finché il provider non restituisce gare. Nessun punteggio viene inventato.`
+        }
       />
     </>
   );
@@ -249,43 +189,4 @@ function emptyNote(slug: string) {
     return 'Classifica non fornita dalla fonte';
   }
   return 'Nessuna tabella ufficiale in archivio per questa competizione. Non viene generata una classifica fittizia.';
-}
-
-function StandingsTable({ rows, format }: { rows: Standing[]; format: StandingFormat }) {
-  const showPoints = format === 'points' || rows.some((row) => (row.points ?? 0) > 0);
-  const showDraws = format === 'points' || rows.some((row) => (row.drawn ?? 0) > 0);
-  const showPlayed = format !== 'ranking' || rows.some((row) => (row.played ?? 0) > 0);
-  const season = rows[0]?.season?.name;
-  return (
-    <div className="card table-wrap">
-      <span className="badge badge-data">DATI</span>
-      {season ? <p className="muted">Stagione {season}</p> : null}
-      <table className="data">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>{format === 'ranking' ? 'Nome' : 'Squadra'}</th>
-            {showPoints ? <th>Pt</th> : null}
-            {showPlayed ? <th>G</th> : null}
-            {format !== 'ranking' ? <th>V</th> : null}
-            {showDraws ? <th>N</th> : null}
-            {format !== 'ranking' ? <th>P</th> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.position}-${row.team.name}`}>
-              <td className="pos">{row.position}</td>
-              <td>{row.team.name}</td>
-              {showPoints ? <td>{row.points}</td> : null}
-              {showPlayed ? <td>{row.played}</td> : null}
-              {format !== 'ranking' ? <td>{row.won ?? '—'}</td> : null}
-              {showDraws ? <td>{row.drawn ?? '—'}</td> : null}
-              {format !== 'ranking' ? <td>{row.lost ?? '—'}</td> : null}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 }

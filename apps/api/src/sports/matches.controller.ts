@@ -18,8 +18,8 @@ export class MatchesController {
   @ApiBearerAuth()
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  list(@Query('sport') sport?: string) {
-    return this.sports.listMatches(sport);
+  list(@Query('sport') sport?: string, @Query('q') q?: string) {
+    return this.sports.listMatches(sport, q);
   }
 
   @ApiBearerAuth()

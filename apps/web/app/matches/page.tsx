@@ -1,6 +1,6 @@
 import { apiGet } from '../../lib/api';
 import { asAgenda } from '../../lib/agenda';
-import { MatchAgenda } from '../../components/match-agenda';
+import { SearchableAgenda } from '../../components/searchable-agenda';
 import { PageHero } from '../../components/page-hero';
 
 export default async function MatchesPage() {
@@ -20,7 +20,7 @@ export default async function MatchesPage() {
           stime restano PROBABILITÀ.
         </p>
       </PageHero>
-      <MatchAgenda recent={recent} upcoming={upcoming} />
+      <SearchableAgenda recent={recent} upcoming={upcoming} />
     </>
   );
 }
