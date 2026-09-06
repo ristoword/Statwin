@@ -69,7 +69,7 @@ export function createSportDeskController(slug: string, path = slug): Type<unkno
 
     @Get('standings')
     standings(@Query('competitionId') competitionId?: string) {
-      return this.desk.standings(slug, competitionId);
+      return this.desk.standingsView(slug, competitionId);
     }
   }
 

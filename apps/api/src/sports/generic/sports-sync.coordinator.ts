@@ -67,6 +67,26 @@ export class SportsSyncCoordinator {
       sports: results,
     };
   }
+
+  async syncStandings(only?: string[]) {
+    const wanted = only?.length ? new Set(only) : null;
+    const results: SportSyncResult[] = [];
+
+    if (!wanted || wanted.has('basketball')) {
+      const raw = await this.basketball.syncStandings();
+      results.push(normalizeResult('basketball', raw));
+    }
+
+    for (const sport of WIRED_TSD_SPORTS) {
+      if (wanted && !wanted.has(sport.slug)) continue;
+      results.push(await this.generic.syncStandings(sport.slug));
+    }
+
+    return {
+      note: 'Solo tabelle ufficiali del provider. Nessuna classifica inventata.',
+      sports: results,
+    };
+  }
 }
 
 function normalizeResult(slug: string, raw: SportSyncResult | Record<string, unknown>): SportSyncResult {

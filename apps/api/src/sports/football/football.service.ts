@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { PredictionEngineService } from '../../prediction-engine/prediction-engine.service';
 import { toFootballCompetitionDto } from '../competition-dto';
+import { loadOfficialStandings, strengthFromStanding, toStandingsPayload } from '../generic/standings';
 
 @Injectable()
 export class FootballService {
@@ -90,19 +91,12 @@ export class FootballService {
   }
 
   standings(competitionId?: string) {
-    return this.prisma.standing.findMany({
-      where: {
-        season: {
-          isCurrent: true,
-          competition: {
-            sport: { slug: 'football' },
-            ...(competitionId ? { id: competitionId } : {}),
-          },
-        },
-      },
-      include: { team: true, season: { include: { competition: true } } },
-      orderBy: { position: 'asc' },
-    });
+    return loadOfficialStandings(this.prisma, 'football', competitionId);
+  }
+
+  async standingsView(competitionId?: string) {
+    const items = await this.standings(competitionId);
+    return toStandingsPayload('football', competitionId, items);
   }
 
   private async estimatesFor(matches: Array<{ id: string; homeTeamId: string; awayTeamId: string; seasonId: string | null }>) {
@@ -117,14 +111,11 @@ export class FootballService {
       if (!match.seasonId) continue;
       const home = byKey.get(`${match.seasonId}:${match.homeTeamId}`);
       const away = byKey.get(`${match.seasonId}:${match.awayTeamId}`);
-      if (!home || !away || home.played === 0 || away.played === 0) continue;
-      result.set(
-        match.id,
-        this.predictions.estimate({
-          homeStrength: home.points / (home.played * 3),
-          awayStrength: away.points / (away.played * 3),
-        }),
-      );
+      if (!home || !away) continue;
+      const homeStrength = strengthFromStanding('football', home);
+      const awayStrength = strengthFromStanding('football', away);
+      if (homeStrength == null || awayStrength == null) continue;
+      result.set(match.id, this.predictions.estimate({ homeStrength, awayStrength }));
     }
     return result;
   }

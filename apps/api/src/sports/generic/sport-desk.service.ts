@@ -4,6 +4,7 @@ import { PredictionEngineService } from '../../prediction-engine/prediction-engi
 import { EMPTY_SPORTS, findWiredSport } from '../../data-providers/thesportsdb/wired-sports';
 import { findSport } from '../sport-catalog';
 import { toCompetitionDto, toFootballCompetitionDto } from '../competition-dto';
+import { loadOfficialStandings, strengthFromStanding, toStandingsPayload } from './standings';
 
 @Injectable()
 export class SportDeskService {
@@ -80,7 +81,7 @@ export class SportDeskService {
       }),
     ]);
     const estimates = includeEstimates
-      ? await this.estimatesFor([...recent, ...upcoming])
+      ? await this.estimatesFor([...recent, ...upcoming], slug)
       : new Map<string, ReturnType<PredictionEngineService['estimate']>>();
     return {
       recent: recent.map((match) => this.withEstimate(match, estimates.get(match.id))),
@@ -115,19 +116,12 @@ export class SportDeskService {
   }
 
   standings(slug: string, competitionId?: string) {
-    return this.prisma.standing.findMany({
-      where: {
-        season: {
-          isCurrent: true,
-          competition: {
-            sport: { slug },
-            ...(competitionId ? { id: competitionId } : {}),
-          },
-        },
-      },
-      include: { team: true, season: { include: { competition: true } } },
-      orderBy: { position: 'asc' },
-    });
+    return loadOfficialStandings(this.prisma, slug, competitionId);
+  }
+
+  async standingsView(slug: string, competitionId?: string) {
+    const items = await this.standings(slug, competitionId);
+    return toStandingsPayload(slug, competitionId, items);
   }
 
   private agenda(slug: string) {
@@ -136,6 +130,7 @@ export class SportDeskService {
 
   private async estimatesFor(
     matches: Array<{ id: string; homeTeamId: string; awayTeamId: string; seasonId: string | null }>,
+    slug: string,
   ) {
     const result = new Map<string, ReturnType<PredictionEngineService['estimate']>>();
     const seasonIds = [...new Set(matches.map((item) => item.seasonId).filter((id): id is string => Boolean(id)))];
@@ -148,14 +143,11 @@ export class SportDeskService {
       if (!match.seasonId) continue;
       const home = byKey.get(`${match.seasonId}:${match.homeTeamId}`);
       const away = byKey.get(`${match.seasonId}:${match.awayTeamId}`);
-      if (!home || !away || home.played === 0 || away.played === 0) continue;
-      result.set(
-        match.id,
-        this.predictions.estimate({
-          homeStrength: home.points / (home.played * 3),
-          awayStrength: away.points / (away.played * 3),
-        }),
-      );
+      if (!home || !away) continue;
+      const homeStrength = strengthFromStanding(slug, home);
+      const awayStrength = strengthFromStanding(slug, away);
+      if (homeStrength == null || awayStrength == null) continue;
+      result.set(match.id, this.predictions.estimate({ homeStrength, awayStrength }));
     }
     return result;
   }

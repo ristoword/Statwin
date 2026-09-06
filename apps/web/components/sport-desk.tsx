@@ -30,6 +30,15 @@ type Standing = {
   drawn?: number;
   lost?: number;
   team: { name: string };
+  season?: { name?: string | null };
+};
+
+type StandingFormat = 'points' | 'win-loss' | 'ranking' | 'none';
+
+type StandingsPayload = {
+  format?: StandingFormat;
+  note?: string | null;
+  items?: Standing[];
 };
 
 async function load(apiPath: string, sportSlug: string, competitionId?: string) {
@@ -41,17 +50,23 @@ async function load(apiPath: string, sportSlug: string, competitionId?: string) 
     const competitions = Array.isArray(rawCompetitions) ? rawCompetitions : [];
     const selected = defaultCompetition(competitions, sportSlug, competitionId);
     const query = selected?.id ? `?competitionId=${selected.id}` : '';
+    const standingsQuery = selected?.id
+      ? `?sport=${encodeURIComponent(sportSlug)}&competitionId=${selected.id}`
+      : `?sport=${encodeURIComponent(sportSlug)}`;
     const token = await getServerAccessToken();
-    const [rawMatches, standings] = await Promise.all([
+    const [rawMatches, rawStandings] = await Promise.all([
       apiGet<unknown>(`/${apiPath}/matches${query}`, token),
-      apiGet<Standing[]>(`/${apiPath}/standings${query}`),
+      apiGet<StandingsPayload | Standing[]>(`/sports/standings${standingsQuery}`),
     ]);
+    const table = asStandings(rawStandings, sportSlug);
     return {
       overview,
       competitions,
       selected,
       matches: asMatchDesk(rawMatches),
-      standings: Array.isArray(standings) ? standings : [],
+      standings: table.items,
+      standingsFormat: table.format,
+      standingsNote: table.note,
     };
   } catch {
     return {
@@ -67,6 +82,8 @@ async function load(apiPath: string, sportSlug: string, competitionId?: string) 
         probabilitiesLocked: false,
       },
       standings: [] as Standing[],
+      standingsFormat: 'none' as StandingFormat,
+      standingsNote: 'Nessuna tabella ufficiale in archivio per questa competizione. Non viene generata una classifica fittizia.',
     };
   }
 }
@@ -81,7 +98,7 @@ export async function SportDesk({
   const sport = findSport(slug);
   if (!sport) notFound();
 
-  const { overview, competitions, selected, matches, standings } = await load(
+  const { overview, competitions, selected, matches, standings, standingsFormat, standingsNote } = await load(
     sport.apiPath,
     sport.slug,
     competitionId,
@@ -162,40 +179,15 @@ export async function SportDesk({
 
       <h2>Classifica</h2>
       {standings.length > 0 ? (
-        <div className="card table-wrap">
-          <span className="badge badge-data">DATI</span>
-          <table className="data">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Squadra</th>
-                <th>Pt</th>
-                <th>G</th>
-                <th>V</th>
-                <th>N</th>
-                <th>P</th>
-              </tr>
-            </thead>
-            <tbody>
-              {standings.map((row) => (
-                <tr key={`${row.position}-${row.team.name}`}>
-                  <td className="pos">{row.position}</td>
-                  <td>{row.team.name}</td>
-                  <td>{row.points}</td>
-                  <td>{row.played}</td>
-                  <td>{row.won ?? '—'}</td>
-                  <td>{row.drawn ?? '—'}</td>
-                  <td>{row.lost ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <StandingsTable rows={standings} format={standingsFormat} />
       ) : (
         <div className="card">
           <EmptyState
-            title="Classifica in attesa"
-            body="Nessuna tabella ufficiale in archivio per questa competizione. Non viene generata una classifica fittizia."
+            title={standingsNote === 'Classifica non fornita dalla fonte' ? 'Classifica non fornita dalla fonte' : 'Classifica in attesa'}
+            body={
+              standingsNote ??
+              'Nessuna tabella ufficiale in archivio per questa competizione. Non viene generata una classifica fittizia.'
+            }
           />
         </div>
       )}
@@ -223,5 +215,77 @@ export async function SportDesk({
         matches={[...matches.upcoming, ...matches.recent]}
       />
     </>
+  );
+}
+
+function asStandings(raw: StandingsPayload | Standing[], slug: string) {
+  if (Array.isArray(raw)) {
+    return {
+      items: raw,
+      format: inferFormat(slug, raw),
+      note: raw.length ? null : emptyNote(slug),
+    };
+  }
+  const items = Array.isArray(raw?.items) ? raw.items : [];
+  return {
+    items,
+    format: raw?.format ?? inferFormat(slug, items),
+    note: raw?.note ?? (items.length ? null : emptyNote(slug)),
+  };
+}
+
+function inferFormat(slug: string, rows: Standing[]): StandingFormat {
+  if (!rows.length) return 'none';
+  if (['basketball', 'american-football', 'ice-hockey', 'baseball'].includes(slug)) {
+    return 'win-loss';
+  }
+  if (rows.some((row) => (row.drawn ?? 0) > 0)) return 'points';
+  if (rows.some((row) => (row.won ?? 0) > 0 || (row.lost ?? 0) > 0)) return 'win-loss';
+  return rows.some((row) => (row.points ?? 0) > 0) ? 'points' : 'ranking';
+}
+
+function emptyNote(slug: string) {
+  if (['tennis', 'formula1', 'mma', 'golf', 'cycling', 'darts', 'horse-racing'].includes(slug)) {
+    return 'Classifica non fornita dalla fonte';
+  }
+  return 'Nessuna tabella ufficiale in archivio per questa competizione. Non viene generata una classifica fittizia.';
+}
+
+function StandingsTable({ rows, format }: { rows: Standing[]; format: StandingFormat }) {
+  const showPoints = format === 'points' || rows.some((row) => (row.points ?? 0) > 0);
+  const showDraws = format === 'points' || rows.some((row) => (row.drawn ?? 0) > 0);
+  const showPlayed = format !== 'ranking' || rows.some((row) => (row.played ?? 0) > 0);
+  const season = rows[0]?.season?.name;
+  return (
+    <div className="card table-wrap">
+      <span className="badge badge-data">DATI</span>
+      {season ? <p className="muted">Stagione {season}</p> : null}
+      <table className="data">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{format === 'ranking' ? 'Nome' : 'Squadra'}</th>
+            {showPoints ? <th>Pt</th> : null}
+            {showPlayed ? <th>G</th> : null}
+            {format !== 'ranking' ? <th>V</th> : null}
+            {showDraws ? <th>N</th> : null}
+            {format !== 'ranking' ? <th>P</th> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.position}-${row.team.name}`}>
+              <td className="pos">{row.position}</td>
+              <td>{row.team.name}</td>
+              {showPoints ? <td>{row.points}</td> : null}
+              {showPlayed ? <td>{row.played}</td> : null}
+              {format !== 'ranking' ? <td>{row.won ?? '—'}</td> : null}
+              {showDraws ? <td>{row.drawn ?? '—'}</td> : null}
+              {format !== 'ranking' ? <td>{row.lost ?? '—'}</td> : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

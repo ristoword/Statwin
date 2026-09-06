@@ -10,6 +10,7 @@ import { HorseRacingModule } from './horse-racing/horse-racing.module';
 import { BaseballModule } from './baseball/baseball.module';
 import { Formula1Module } from './formula1/formula1.module';
 import { PredisposedSportsModule } from './generic/predisposed-sports.module';
+import { SportDeskModule } from './generic/sport-desk.module';
 import { SportsSyncCoordinator } from './generic/sports-sync.coordinator';
 
 @Module({
@@ -22,6 +23,7 @@ import { SportsSyncCoordinator } from './generic/sports-sync.coordinator';
     HorseRacingModule,
     BaseballModule,
     Formula1Module,
+    SportDeskModule,
   ],
   controllers: [SportsController, MatchesController],
   providers: [SportsService, SportsSyncCoordinator],

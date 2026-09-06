@@ -80,19 +80,11 @@ export class BasketballService {
   }
 
   standings(competitionId?: string) {
-    return this.prisma.standing.findMany({
-      where: {
-        season: {
-          isCurrent: true,
-          competition: {
-            sport: { slug: 'basketball' },
-            ...(competitionId ? { id: competitionId } : {}),
-          },
-        },
-      },
-      include: { team: true, season: { include: { competition: true } } },
-      orderBy: { position: 'asc' },
-    });
+    return this.desk.standings('basketball', competitionId);
+  }
+
+  standingsView(competitionId?: string) {
+    return this.desk.standingsView('basketball', competitionId);
   }
 
   private async estimatesFor(
@@ -109,14 +101,11 @@ export class BasketballService {
       if (!match.seasonId) continue;
       const home = byKey.get(`${match.seasonId}:${match.homeTeamId}`);
       const away = byKey.get(`${match.seasonId}:${match.awayTeamId}`);
-      if (!home || !away || home.played === 0 || away.played === 0) continue;
-      result.set(
-        match.id,
-        this.predictions.estimate({
-          homeStrength: home.points / (home.played * 3),
-          awayStrength: away.points / (away.played * 3),
-        }),
-      );
+      if (!home || !away) continue;
+      const homeStrength = home.played ? home.won / home.played : null;
+      const awayStrength = away.played ? away.won / away.played : null;
+      if (homeStrength == null || awayStrength == null) continue;
+      result.set(match.id, this.predictions.estimate({ homeStrength, awayStrength }));
     }
     return result;
   }

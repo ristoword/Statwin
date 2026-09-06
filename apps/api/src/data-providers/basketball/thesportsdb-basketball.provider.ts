@@ -8,6 +8,7 @@ import {
   ExternalStanding,
   ExternalTeam,
 } from '../interfaces/external-football';
+import { tsdSeasonCandidates } from '../thesportsdb/tsd-client';
 
 type TsdTeam = {
   idTeam: string;
@@ -34,11 +35,14 @@ type TsdEvent = {
 
 type TsdTableRow = {
   idTeam: string;
+  strTeam?: string;
   intRank?: string | number;
   intPlayed?: string | number;
   intWin?: string | number;
+  intWon?: string | number;
   intDraw?: string | number;
   intLoss?: string | number;
+  intLost?: string | number;
   intGoalsFor?: string | number;
   intGoalsAgainst?: string | number;
   intPoints?: string | number;
@@ -125,20 +129,27 @@ export class TheSportsDbBasketballProvider implements BasketballDataProvider {
   }
 
   async fetchStandings(competition: ExternalCompetition): Promise<ExternalStanding[]> {
-    const payload = await this.getJson<{ table?: TsdTableRow[] }>(
-      `/lookuptable.php?l=${competition.shortcut}&s=${encodeURIComponent(this.season)}`,
-    );
-    return (payload.table ?? []).map((row, index) => ({
-      teamExternalId: `tsd-bsk:team:${row.idTeam}`,
-      position: num(row.intRank) || index + 1,
-      played: num(row.intPlayed),
-      won: num(row.intWin),
-      drawn: num(row.intDraw),
-      lost: num(row.intLoss),
-      goalsFor: num(row.intGoalsFor),
-      goalsAgainst: num(row.intGoalsAgainst),
-      points: num(row.intPoints),
-    }));
+    const seasons = tsdSeasonCandidates(competition.seasonName, this.season);
+    for (const season of seasons) {
+      const payload = await this.getJson<{ table?: TsdTableRow[] | null }>(
+        `/lookuptable.php?l=${competition.shortcut}&s=${encodeURIComponent(season)}`,
+      );
+      const rows = payload.table ?? [];
+      if (!rows.length) continue;
+      return rows.map((row, index) => ({
+        teamExternalId: `tsd-bsk:team:${row.idTeam}`,
+        teamName: row.strTeam?.trim() || undefined,
+        position: num(row.intRank) || index + 1,
+        played: num(row.intPlayed),
+        won: num(row.intWin ?? row.intWon),
+        drawn: num(row.intDraw),
+        lost: num(row.intLoss ?? row.intLost),
+        goalsFor: num(row.intGoalsFor),
+        goalsAgainst: num(row.intGoalsAgainst),
+        points: num(row.intPoints),
+      }));
+    }
+    return [];
   }
 
   private mapTeam(team: TsdTeam, country?: string): ExternalTeam {
@@ -201,13 +212,24 @@ export class TheSportsDbBasketballProvider implements BasketballDataProvider {
   private async getJson<T>(path: string): Promise<T> {
     const url = `${this.baseUrl}/${this.apiKey}${path.startsWith('/') ? path : `/${path}`}`;
     let lastError: Error | undefined;
-    for (let attempt = 1; attempt <= 4; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, attempt === 1 ? 400 : 1500 * attempt));
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const waitMs = attempt === 1 ? 700 : 2500 * attempt;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (res.ok) {
-        return (await res.json()) as T;
-      }
       if (res.status === 404) return {} as T;
+      if (res.ok) {
+        const text = await res.text();
+        if (!text.trim() || text.includes('error code:')) {
+          lastError = new Error(`TheSportsDB basketball ${path} empty body`);
+          continue;
+        }
+        try {
+          return JSON.parse(text) as T;
+        } catch {
+          lastError = new Error(`TheSportsDB basketball ${path} invalid JSON`);
+          continue;
+        }
+      }
       lastError = new Error(`TheSportsDB basketball ${path} failed: ${res.status}`);
       if (res.status !== 429 && res.status < 500) break;
     }

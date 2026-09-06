@@ -9,7 +9,17 @@ import {
   ExternalTeam,
 } from '../interfaces/external-football';
 import { findWiredSport, type WiredSportSpec } from './wired-sports';
-import { num, slugify, TheSportsDbClient, type TsdEvent, type TsdLeague, type TsdTeam } from './tsd-client';
+import {
+  lookupTsdTable,
+  mapTsdTableRow,
+  num,
+  slugify,
+  TheSportsDbClient,
+  tsdSeasonCandidates,
+  type TsdEvent,
+  type TsdLeague,
+  type TsdTeam,
+} from './tsd-client';
 
 @Injectable()
 export class TheSportsDbSportFactory {
@@ -116,28 +126,10 @@ export class TheSportsDbSportProvider implements FootballDataProvider {
   }
 
   async fetchStandings(competition: ExternalCompetition): Promise<ExternalStanding[]> {
-    const payload = await this.client.getJson<{ table?: Array<{
-      idTeam: string;
-      intRank?: string | number;
-      intPlayed?: string | number;
-      intWin?: string | number;
-      intDraw?: string | number;
-      intLoss?: string | number;
-      intGoalsFor?: string | number;
-      intGoalsAgainst?: string | number;
-      intPoints?: string | number;
-    }> }>(`/lookuptable.php?l=${competition.shortcut}&s=${encodeURIComponent(competition.seasonName)}`);
-    return (payload.table ?? []).map((row, index) => ({
-      teamExternalId: `${this.spec.prefix}:team:${row.idTeam}`,
-      position: num(row.intRank) || index + 1,
-      played: num(row.intPlayed),
-      won: num(row.intWin),
-      drawn: num(row.intDraw),
-      lost: num(row.intLoss),
-      goalsFor: num(row.intGoalsFor),
-      goalsAgainst: num(row.intGoalsAgainst),
-      points: num(row.intPoints),
-    }));
+    const league = await this.leagueInfo(competition.shortcut);
+    const seasons = tsdSeasonCandidates(competition.seasonName, this.configuredSeason, league?.strCurrentSeason);
+    const rows = await lookupTsdTable(this.client, competition.shortcut, seasons);
+    return rows.map((row, index) => mapTsdTableRow(row, this.spec.prefix, index));
   }
 
   private async leagueInfo(id: string): Promise<TsdLeague | null> {

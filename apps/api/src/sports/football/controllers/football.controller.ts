@@ -63,6 +63,6 @@ export class FootballController {
 
   @Get('standings')
   standings(@Query('competitionId') competitionId?: string) {
-    return this.football.standings(competitionId);
+    return this.football.standingsView(competitionId);
   }
 }

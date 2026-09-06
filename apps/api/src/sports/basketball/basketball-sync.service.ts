@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { BASKETBALL_DATA_PROVIDER } from '../../data-providers/data-providers.module';
 import { BasketballDataProvider } from '../../data-providers/interfaces/sports-data-provider';
 import { ExternalCompetition } from '../../data-providers/interfaces/external-football';
+import { leagueShortcutFromExternalId, persistOfficialStandings } from '../generic/standings';
 
 @Injectable()
 export class BasketballSyncService {
@@ -36,7 +37,7 @@ export class BasketballSyncService {
         const persisted = await this.upsertCompetition(sport.id, competition);
         teams += await this.upsertTeams(sport.id, competition);
         matches += await this.upsertMatches(sport.id, persisted.competitionId, persisted.seasonId, competition);
-        standings += await this.upsertStandings(persisted.seasonId, competition);
+        standings += await this.safeStandings(sport.id, persisted.seasonId, competition);
       } catch (error) {
         this.logger.error(`Skip ${competition.name}: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -218,40 +219,71 @@ export class BasketballSyncService {
     return team.id;
   }
 
-  private async upsertStandings(seasonId: string, competition: ExternalCompetition) {
+  async syncStandings() {
+    const sport = await this.prisma.sport.findUnique({
+      where: { slug: 'basketball' },
+      include: { competitions: { include: { seasons: true, leagues: true } } },
+    });
+    if (!sport?.competitions.length) {
+      return {
+        provider: this.provider.slug,
+        source: this.provider.slug,
+        note: 'Nessuna competizione in archivio. Nessuna classifica inventata.',
+        imported: { competitions: 0, teams: 0, matches: 0, standings: 0 },
+      };
+    }
+
+    let standings = 0;
+    for (const competition of sport.competitions) {
+      const season = competition.seasons.find((item) => item.isCurrent) ?? competition.seasons[0];
+      const shortcut =
+        leagueShortcutFromExternalId(competition.externalId) ??
+        leagueShortcutFromExternalId(competition.leagues[0]?.externalId);
+      if (!season || !shortcut) continue;
+      standings += await this.safeStandings(sport.id, season.id, {
+        externalId: competition.externalId ?? `tsd-bsk:${shortcut}`,
+        name: competition.name,
+        country: competition.country ?? undefined,
+        type: competition.type,
+        shortcut,
+        seasonName: season.name,
+        seasonYear: Number(String(season.name).slice(0, 4)) || new Date().getUTCFullYear(),
+      });
+    }
+
+    return {
+      provider: this.provider.slug,
+      source: this.provider.slug,
+      note: 'Solo tabelle restituite dal provider. Nessuna classifica inventata.',
+      imported: { competitions: sport.competitions.length, teams: 0, matches: 0, standings },
+    };
+  }
+
+  private async safeStandings(sportId: string, seasonId: string, competition: ExternalCompetition) {
+    try {
+      return await this.upsertStandings(sportId, seasonId, competition);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Standings ${competition.name}: ${message}`);
+      if (message.includes('429')) {
+        await new Promise((resolve) => setTimeout(resolve, 15000));
+        try {
+          return await this.upsertStandings(sportId, seasonId, competition);
+        } catch (retryError) {
+          this.logger.error(
+            `Standings retry ${competition.name}: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
+          );
+        }
+      }
+      return 0;
+    }
+  }
+
+  private async upsertStandings(sportId: string, seasonId: string, competition: ExternalCompetition) {
     if (!this.provider.fetchStandings) {
       return 0;
     }
     const rows = await this.provider.fetchStandings(competition);
-    for (const row of rows) {
-      const team = await this.prisma.team.findUnique({ where: { externalId: row.teamExternalId } });
-      if (!team) continue;
-      await this.prisma.standing.upsert({
-        where: { seasonId_teamId: { seasonId, teamId: team.id } },
-        update: {
-          position: row.position,
-          played: row.played,
-          won: row.won,
-          drawn: row.drawn,
-          lost: row.lost,
-          goalsFor: row.goalsFor,
-          goalsAgainst: row.goalsAgainst,
-          points: row.points,
-        },
-        create: {
-          seasonId,
-          teamId: team.id,
-          position: row.position,
-          played: row.played,
-          won: row.won,
-          drawn: row.drawn,
-          lost: row.lost,
-          goalsFor: row.goalsFor,
-          goalsAgainst: row.goalsAgainst,
-          points: row.points,
-        },
-      });
-    }
-    return rows.length;
+    return persistOfficialStandings(this.prisma, { sportId, seasonId, rows });
   }
 }
