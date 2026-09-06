@@ -16,11 +16,11 @@ const COPY: Record<string, { title: string; price: string; blurb: string; featur
   FREE: { title: 'Free', price: '0', blurb: 'DATI e STATISTICHE di base per entrare nel desk.' },
   PREMIUM: {
     title: 'Premium',
-    price: '19',
+    price: '6,99',
     blurb: 'Aggiunge le PROBABILITÀ modellistiche sulle partite in archivio.',
     featured: true,
   },
-  PRO: { title: 'Pro', price: '49', blurb: 'Sblocca i report ANALISI AI e la lettura completa a quattro livelli.' },
+  PRO: { title: 'Pro', price: '12,99', blurb: 'Sblocca i report ANALISI AI e la lettura completa a quattro livelli.' },
 };
 
 export function PlanGrid({ plans }: { plans: Plan[] }) {
