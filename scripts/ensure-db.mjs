@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const INIT_MIGRATION = '20260306000000_init';
 
 export function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -25,22 +24,14 @@ export async function ensureDatabase() {
     await run('npx', ['prisma', 'migrate', 'deploy', '--schema=prisma/schema.prisma']);
     return;
   } catch (error) {
-    console.warn('prisma migrate deploy failed; clearing failed migration and syncing schema.');
+    console.warn(
+      'prisma migrate deploy failed; syncing schema with a non-destructive db push. Users are not reset.',
+    );
     console.warn(error.message);
   }
 
-  try {
-    await run('npx', [
-      'prisma',
-      'migrate',
-      'resolve',
-      '--rolled-back',
-      INIT_MIGRATION,
-      '--schema=prisma/schema.prisma',
-    ]);
-  } catch {
-    /* already resolved or table missing */
-  }
+  // Intentionally no `migrate resolve --rolled-back` and no `migrate reset`.
+  // Those made Prisma treat the database as empty and dropped client accounts.
 
   await run('npx', ['prisma', 'db', 'push', '--schema=prisma/schema.prisma', '--skip-generate']);
 }

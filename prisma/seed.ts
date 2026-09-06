@@ -1,8 +1,39 @@
-import { PrismaClient, Role, SubscriptionPlan } from '@prisma/client';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { PrismaClient, Role, SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
+
+loadLocalEnv();
 
 const prisma = new PrismaClient();
+const LEGACY_ADMIN_EMAIL = 'admin@statwin.local';
+const DEFAULT_ADMIN_EMAIL = 'basilepaolo@me.com';
+
+function loadLocalEnv() {
+  const envPath = resolve(__dirname, '../.env');
+  if (!existsSync(envPath)) return;
+  for (const raw of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
 
 async function main() {
+  // Persistence contract: never delete users, subscriptions, tokens, or client accounts.
+  // Seed only upserts catalog rows and the official admin. Francesco and other clients stay.
+
   const sports = [
     { slug: 'football', name: 'Calcio', isActive: true },
     { slug: 'basketball', name: 'Basket', isActive: true },
@@ -55,33 +86,117 @@ async function main() {
     },
   });
 
-  const adminEmail = 'admin@statwin.local';
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (!existingAdmin) {
-    const bcryptMod = await import('bcryptjs');
-    const bcrypt = bcryptMod.default ?? bcryptMod;
-    const passwordHash = await bcrypt.hash('ChangeMeAdmin1!', 10);
-    const admin = await prisma.user.create({
+  await upsertOfficialAdmin();
+
+  console.log('Seed strutturale completato: sport, piani, modello baseline. Nessun risultato sportivo inventato.');
+}
+
+async function upsertOfficialAdmin() {
+  const adminEmail = (process.env.ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL).trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const now = new Date();
+
+  let admin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  const legacy =
+    adminEmail !== LEGACY_ADMIN_EMAIL
+      ? await prisma.user.findUnique({ where: { email: LEGACY_ADMIN_EMAIL } })
+      : null;
+
+  if (!admin && legacy) {
+    admin = await prisma.user.update({
+      where: { id: legacy.id },
+      data: { email: adminEmail },
+    });
+    console.log(`Admin ufficiale migrato da ${LEGACY_ADMIN_EMAIL} a ${adminEmail}.`);
+  }
+
+  if (!adminPassword) {
+    if (!admin) {
+      console.warn(
+        'ADMIN_PASSWORD non impostata: admin ufficiale non creato. Imposta ADMIN_EMAIL / ADMIN_PASSWORD nel .env locale.',
+      );
+    } else {
+      await prisma.user.update({
+        where: { id: admin.id },
+        data: {
+          role: Role.ADMIN,
+          isActive: true,
+          emailVerified: true,
+        },
+      });
+      await ensureProSubscription(admin.id);
+      await retireLeftoverLegacyAdmin(admin.id);
+      console.log(`Admin ufficiale già presente: ${adminEmail} (password invariata).`);
+    }
+    return;
+  }
+
+  const bcryptMod = await import('bcryptjs');
+  const bcrypt = bcryptMod.default ?? bcryptMod;
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+
+  if (!admin) {
+    admin = await prisma.user.create({
       data: {
         email: adminEmail,
         passwordHash,
-        firstName: 'Admin',
-        lastName: 'STATWIN',
+        firstName: 'Paolo',
+        lastName: 'Basile',
         role: Role.ADMIN,
         emailVerified: true,
-        acceptedTermsAt: new Date(),
-        acceptedDisclaimerAt: new Date(),
+        isActive: true,
+        acceptedTermsAt: now,
+        acceptedDisclaimerAt: now,
       },
     });
-    await prisma.subscription.create({
-      data: {
-        userId: admin.id,
-        plan: SubscriptionPlan.PRO,
-      },
-    });
+    await ensureProSubscription(admin.id);
+    await retireLeftoverLegacyAdmin(admin.id);
+    console.log(`Admin ufficiale creato: ${adminEmail}`);
+    return;
   }
 
-  console.log('Seed strutturale completato: sport, piani, modello baseline. Nessun risultato sportivo inventato.');
+  await prisma.user.update({
+    where: { id: admin.id },
+    data: {
+      passwordHash,
+      firstName: 'Paolo',
+      lastName: 'Basile',
+      role: Role.ADMIN,
+      isActive: true,
+      emailVerified: true,
+      acceptedTermsAt: admin.acceptedTermsAt ?? now,
+      acceptedDisclaimerAt: admin.acceptedDisclaimerAt ?? now,
+    },
+  });
+  await ensureProSubscription(admin.id);
+  await retireLeftoverLegacyAdmin(admin.id);
+  console.log(`Admin ufficiale aggiornato: ${adminEmail}`);
+}
+
+async function retireLeftoverLegacyAdmin(officialAdminId: string) {
+  const leftover = await prisma.user.findUnique({ where: { email: LEGACY_ADMIN_EMAIL } });
+  if (!leftover || leftover.id === officialAdminId) {
+    return;
+  }
+  await prisma.user.update({
+    where: { id: leftover.id },
+    data: { isActive: false },
+  });
+  console.log(
+    `Account legacy ${LEGACY_ADMIN_EMAIL} disattivato. Accedi solo con l'email ufficiale.`,
+  );
+}
+
+async function ensureProSubscription(userId: string) {
+  await prisma.subscription.upsert({
+    where: { userId },
+    update: { plan: SubscriptionPlan.PRO, status: SubscriptionStatus.ACTIVE },
+    create: {
+      userId,
+      plan: SubscriptionPlan.PRO,
+      status: SubscriptionStatus.ACTIVE,
+    },
+  });
 }
 
 main()

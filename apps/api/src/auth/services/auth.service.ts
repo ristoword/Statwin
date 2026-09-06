@@ -30,13 +30,14 @@ export class AuthService {
     if (!dto.acceptTerms) {
       throw new BadRequestException('Devi accettare i termini e il disclaimer di analisi statistica.');
     }
-    const existing = await this.users.findByEmail(dto.email);
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.users.findByEmail(email);
     if (existing) {
       throw new ConflictException('Email già registrata.');
     }
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.users.create({
-      email: dto.email,
+      email,
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
@@ -45,7 +46,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, meta: RequestMeta = {}) {
-    const email = dto.email.trim();
+    const email = dto.email.trim().toLowerCase();
     const user = await this.users.findByEmail(email);
     if (!user || !user.isActive) {
       await this.audit.record({
@@ -180,6 +181,8 @@ export class AuthService {
       accessToken,
       refreshToken,
       tokenType: 'Bearer',
+      role,
+      email,
       disclaimer:
         'STATWIN fornisce analisi statistiche. Le probabilità sono stime, non certezze. Non promette vincite.',
     };

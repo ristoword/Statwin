@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { AppRole } from '../enums/roles.enum';
@@ -16,6 +16,9 @@ export class RolesGuard implements CanActivate {
       return true;
     }
     const { user } = context.switchToHttp().getRequest<{ user?: { role?: AppRole } }>();
-    return !!user && required.includes(user.role as AppRole);
+    if (!user || !required.includes(user.role as AppRole)) {
+      throw new ForbiddenException('Accesso riservato agli amministratori.');
+    }
+    return true;
   }
 }

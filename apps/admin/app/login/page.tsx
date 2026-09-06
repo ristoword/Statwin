@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { apiPost } from '../../lib/api';
 import { ADMIN_TOKEN_KEY } from '../../lib/session';
 
+function readJwtRole(accessToken: string): string | undefined {
+  try {
+    const payload = JSON.parse(atob(accessToken.split('.')[1] ?? '')) as { role?: unknown };
+    return typeof payload.role === 'string' ? payload.role : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [error, setError] = useState('');
@@ -13,14 +22,21 @@ export default function AdminLoginPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      const tokens = await apiPost<{ accessToken: string }>('/auth/login', {
-        email: String(form.get('email') ?? ''),
+      const tokens = await apiPost<{ accessToken: string; role?: string }>('/auth/login', {
+        email: String(form.get('email') ?? '').trim().toLowerCase(),
         password: String(form.get('password') ?? ''),
       });
+      const role = tokens.role ?? readJwtRole(tokens.accessToken);
+      if (role !== 'ADMIN') {
+        setError(
+          'Questo account non è un amministratore. Accedi dalla web app (porta 3000), non dalla control room.',
+        );
+        return;
+      }
       localStorage.setItem(ADMIN_TOKEN_KEY, tokens.accessToken);
       router.push('/');
-    } catch {
-      setError('Accesso non riuscito. Solo account ADMIN attivi.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Accesso non riuscito. Solo account ADMIN attivi.');
     }
   }
 

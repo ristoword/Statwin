@@ -33,7 +33,7 @@ Database locale:
 - user `statwin` / password `statwin_secret`
 - superuser di installazione: `postgres` / `postgres`
 
-Account seed admin: `admin@statwin.local` / `ChangeMeAdmin1!`
+Account admin ufficiale: `basilepaolo@me.com` (password solo in `.env` locale: `ADMIN_EMAIL` / `ADMIN_PASSWORD`). Il seed non cancella gli altri utenti.
 
 Redis è opzionale in questa fase (i job restano idle). Docker Compose resta disponibile se preferisci i container.
 
@@ -73,7 +73,9 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `FRONTEND_URL` | `https://statwin-production.up.railway.app` |
 | `ADMIN_URL` | `https://statwin-production.up.railway.app` |
 | `API_INTERNAL_URL` | `http://127.0.0.1:3001` |
-| `SEED_ON_BOOT` | `true` al primo deploy, poi `false` |
+| `SEED_ON_BOOT` | `true` per upsertare l'admin ufficiale (non cancella gli account clienti). Poi `false` se non vuoi riscrivere la password ad ogni boot. |
+| `ADMIN_EMAIL` | `basilepaolo@me.com` |
+| `ADMIN_PASSWORD` | la password scelta dal owner, solo in Railway Variables / `.env` locale, mai in git |
 | `FOOTBALL_DATA_PROVIDER` | `composite` |
 | `OPENLIGADB_BASE_URL` | `https://api.openligadb.de` |
 | `OPENLIGADB_SEASON` | `2026` |
@@ -87,7 +89,7 @@ Builder: Dockerfile (`railway.toml` in root). Dominio: `statwin-production.up.ra
 | `AI_DEFAULT_MODEL` | `gpt-4o` |
 | `AI_SCHEDULER_TOKEN` | token per i job AI schedulati |
 
-Dopo il primo boot (seed admin `admin@statwin.local` / `ChangeMeAdmin1!`) sincronizza i dati calcio:
+Dopo il deploy, imposta `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `SEED_ON_BOOT=true` in Railway e **ridistribuisci**. Il seed crea o aggiorna `basilepaolo@me.com` e disattiva il vecchio `admin@statwin.local` se è rimasto un account separato. Poi sincronizza i dati calcio:
 
 ```bash
 curl -X POST https://statwin-production.up.railway.app/api/v1/football/sync

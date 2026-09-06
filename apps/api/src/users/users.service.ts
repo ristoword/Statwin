@@ -7,8 +7,9 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
+    const normalized = email.trim().toLowerCase();
+    return this.prisma.user.findFirst({
+      where: { email: { equals: normalized, mode: 'insensitive' } },
       include: { subscription: true },
     });
   }
@@ -28,7 +29,7 @@ export class UsersService {
   }) {
     return this.prisma.user.create({
       data: {
-        email: data.email,
+        email: data.email.trim().toLowerCase(),
         passwordHash: data.passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
