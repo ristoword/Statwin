@@ -1,17 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiGet } from '../../lib/api';
 import { clearTokens, getAccessToken } from '../../lib/auth-storage';
+import { AccountForm, type AccountProfile } from '../../components/account-form';
 import { SportsGrid } from '../../components/sports-grid';
 
-type Profile = {
-  email: string;
-  firstName?: string | null;
-  role: string;
-  subscription?: { plan: string; status: string } | null;
-};
+type Profile = AccountProfile;
 
 type FootballOverview = {
   sport?: { name: string; slug: string };
@@ -23,6 +19,10 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [football, setFootball] = useState<FootballOverview | null>(null);
   const [error, setError] = useState('');
+
+  const onAccountProfile = useCallback((data: Profile) => {
+    setProfile(data);
+  }, []);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -57,7 +57,11 @@ export default function DashboardPage() {
               <p>
                 Piano <strong>{profile.subscription?.plan ?? 'FREE'}</strong> · {profile.role}
               </p>
+              {profile.phone ? <p className="muted">Tel. {profile.phone}</p> : null}
               <p>
+                <Link className="btn-ghost" href="/settings#account">
+                  Account
+                </Link>{' '}
                 <Link className="btn-ghost" href="/subscriptions">
                   Gestisci piano
                 </Link>
@@ -82,6 +86,17 @@ export default function DashboardPage() {
           </p>
         )}
       </div>
+
+      {profile ? (
+        <div className="card" id="account">
+          <p className="kicker">Account</p>
+          <h2>Email, telefono e password</h2>
+          <p className="disclaimer">
+            Cambia i dati del desk. Per l’email serve la password attuale. 18+.
+          </p>
+          <AccountForm onProfile={onAccountProfile} />
+        </div>
+      ) : null}
 
       {profile?.role === 'ADMIN' ? (
         <div className="card">

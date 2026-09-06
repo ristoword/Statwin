@@ -1,10 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { AuditAction } from '../audit/audit.constants';
+import type { RequestMeta } from '../audit/request-meta';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateMeDto } from './dto/update-me.dto';
+import { normalizePhone } from './phone';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   findByEmail(email: string) {
     const normalized = email.trim().toLowerCase();
@@ -51,6 +67,94 @@ export class UsersService {
     }
     const { passwordHash, passwordResetToken, emailVerifyToken, ...safe } = user;
     return safe;
+  }
+
+  async updateMe(id: string, dto: UpdateMeDto, meta: RequestMeta = {}) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Utente non trovato.');
+    }
+
+    const data: { email?: string; phone?: string | null } = {};
+    const fields: string[] = [];
+
+    if (dto.phone !== undefined) {
+      const phone = normalizePhone(dto.phone);
+      if (phone !== user.phone) {
+        data.phone = phone;
+        fields.push('phone');
+      }
+    }
+
+    if (dto.email !== undefined) {
+      const email = dto.email.trim().toLowerCase();
+      if (email !== user.email) {
+        if (!dto.currentPassword) {
+          throw new BadRequestException('La password attuale è obbligatoria per cambiare email.');
+        }
+        const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+        if (!ok) {
+          throw new UnauthorizedException('Password attuale non corretta.');
+        }
+        const taken = await this.findByEmail(email);
+        if (taken && taken.id !== id) {
+          throw new ConflictException('Email già in uso.');
+        }
+        data.email = email;
+        fields.push('email');
+      }
+    }
+
+    if (fields.length === 0) {
+      return this.getProfile(id);
+    }
+
+    await this.prisma.user.update({ where: { id }, data });
+    await this.audit.record({
+      action: AuditAction.PROFILE_UPDATE,
+      userId: id,
+      actorId: id,
+      metadata: { fields },
+      ...meta,
+    });
+    return this.getProfile(id);
+  }
+
+  async changePassword(id: string, dto: ChangePasswordDto, meta: RequestMeta = {}) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('Utente non trovato.');
+    }
+
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('Password attuale non corretta.');
+    }
+    if (dto.newPassword === dto.currentPassword) {
+      throw new BadRequestException('La nuova password deve essere diversa da quella attuale.');
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash: await bcrypt.hash(dto.newPassword, 10),
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      },
+    });
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: id, revoked: false },
+      data: { revoked: true },
+    });
+    await this.audit.record({
+      action: AuditAction.PASSWORD_CHANGE,
+      userId: id,
+      actorId: id,
+      metadata: { revokedRefreshTokens: true },
+      ...meta,
+    });
+
+    return { success: true };
   }
 
   list(params: { skip?: number; take?: number } = {}) {

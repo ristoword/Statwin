@@ -10,6 +10,8 @@ export const AuditAction = {
   ADMIN_PLAN_CHANGE: 'ADMIN_PLAN_CHANGE',
   FEATURE_AI_ANALYZE: 'FEATURE_AI_ANALYZE',
   FEATURE_CHECKOUT: 'FEATURE_CHECKOUT',
+  PROFILE_UPDATE: 'PROFILE_UPDATE',
+  PASSWORD_CHANGE: 'PASSWORD_CHANGE',
 } as const;
 
 export type AuditActionName = (typeof AuditAction)[keyof typeof AuditAction];

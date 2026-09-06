@@ -531,6 +531,29 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { border-color: rgba(232, 200, 114, 0.55); }
 label { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 14px; }
 label input { width: auto; margin: 0; }
+.field {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  align-items: stretch;
+}
+.field > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.field input { width: 100%; margin: 0; }
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 8px;
+}
+.account-grid form button { margin-top: 16px; width: 100%; }
+.form-ok { color: var(--green); font-size: 14px; margin: 10px 0 0; }
+.form-err { color: var(--red); font-size: 14px; margin: 10px 0 0; }
 
 .disclaimer { color: var(--warn); font-size: 14px; }
 .muted { color: var(--muted); }
@@ -757,7 +780,7 @@ label input { width: auto; margin: 0; }
 
 @media (max-width: 639px) {
   .page, .header-inner, .footer-inner { width: min(1180px, calc(100% - 20px)); }
-  .grid, .grid-2, .grid-4, .agenda { grid-template-columns: 1fr; }
+  .grid, .grid-2, .grid-4, .agenda, .account-grid { grid-template-columns: 1fr; }
   .hero-actions { flex-direction: column; align-items: stretch; }
   .hero-actions .btn, .hero-actions .btn-ghost { width: 100%; }
   .stat strong { font-size: 36px; }
