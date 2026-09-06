@@ -89,6 +89,7 @@ async function main() {
   });
 
   await upsertOfficialAdmin();
+  await reactivateFrancescoBasile();
 
   console.log('Seed strutturale completato: sport, piani, modello baseline. Nessun risultato sportivo inventato.');
 }
@@ -173,6 +174,50 @@ async function upsertOfficialAdmin() {
   await ensureProSubscription(admin.id);
   await retireLeftoverLegacyAdmin(admin.id);
   console.log(`Admin ufficiale aggiornato: ${adminEmail}`);
+}
+
+async function reactivateFrancescoBasile() {
+  const matches = await prisma.user.findMany({
+    where: {
+      OR: [
+        {
+          AND: [
+            { firstName: { equals: 'Francesco', mode: 'insensitive' } },
+            { lastName: { equals: 'Basile', mode: 'insensitive' } },
+          ],
+        },
+        { email: { contains: 'francesco.basile', mode: 'insensitive' } },
+        { email: { contains: 'francescobasile', mode: 'insensitive' } },
+      ],
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      isActive: true,
+      role: true,
+      lastLoginAt: true,
+    },
+  });
+
+  if (matches.length === 0) {
+    console.log('Francesco Basile: nessun account in archivio (né attivo né bloccato).');
+    return;
+  }
+
+  for (const user of matches) {
+    const label = `${user.firstName ?? ''} ${user.lastName ?? ''} <${user.email}>`.trim();
+    if (user.isActive) {
+      console.log(`Francesco Basile già attivo: ${label} (${user.role})`);
+      continue;
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isActive: true },
+    });
+    console.log(`Francesco Basile sbloccato: ${label}`);
+  }
 }
 
 async function retireLeftoverLegacyAdmin(officialAdminId: string) {
