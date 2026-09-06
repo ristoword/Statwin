@@ -35,6 +35,7 @@ type TsdEvent = {
 
 type TsdTableRow = {
   idTeam: string;
+  strTeam?: string;
   intRank?: string | number;
   intPlayed?: string | number;
   intWin?: string | number;
@@ -61,8 +62,14 @@ export class TheSportsDbProvider implements FootballDataProvider {
   }
 
   async ping() {
-    const res = await fetch(`${this.baseUrl}/${this.apiKey}/lookupleague.php?id=4328`);
-    return { ok: res.ok, provider: this.slug };
+    try {
+      const res = await fetch(`${this.baseUrl}/${this.apiKey}/lookupleague.php?id=4328`, {
+        signal: AbortSignal.timeout(8_000),
+      });
+      return { ok: res.ok, provider: this.slug };
+    } catch {
+      return { ok: false, provider: this.slug };
+    }
   }
 
   async fetchCompetitions(): Promise<ExternalCompetition[]> {
@@ -141,6 +148,7 @@ export class TheSportsDbProvider implements FootballDataProvider {
     );
     return (payload.table ?? []).map((row, index) => ({
       teamExternalId: `tsd:team:${row.idTeam}`,
+      teamName: row.strTeam?.trim() || undefined,
       position: num(row.intRank) || index + 1,
       played: num(row.intPlayed),
       won: num(row.intWin),
@@ -209,7 +217,16 @@ export class TheSportsDbProvider implements FootballDataProvider {
     for (let attempt = 1; attempt <= 5; attempt += 1) {
       const waitMs = attempt === 1 ? 700 : 2500 * attempt;
       await new Promise((resolve) => setTimeout(resolve, waitMs));
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(15_000),
+        });
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        continue;
+      }
       if (res.status === 404) return {} as T;
       if (res.ok) {
         const text = await res.text();

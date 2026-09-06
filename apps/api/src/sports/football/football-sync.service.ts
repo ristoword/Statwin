@@ -5,6 +5,7 @@ import { FOOTBALL_DATA_PROVIDER } from '../../data-providers/data-providers.modu
 import { FootballDataProvider } from '../../data-providers/interfaces/sports-data-provider';
 import { ExternalCompetition } from '../../data-providers/interfaces/external-football';
 import { inferFootballCountry } from '../../data-providers/football/european-leagues';
+import { persistOfficialStandings } from '../generic/standings';
 
 @Injectable()
 export class FootballSyncService {
@@ -16,7 +17,31 @@ export class FootballSyncService {
   ) {}
 
   async syncAll() {
-    const ping = await this.provider.ping();
+    try {
+      return await this.runSync();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Football sync failed: ${message}`);
+      return {
+        provider: this.provider.slug,
+        source: this.provider.slug,
+        note: message.includes('429')
+          ? 'TheSportsDB ha risposto 429 (rate limit). Riprova più tardi. Nessun risultato inventato.'
+          : `Sync interrotto: ${message}. Nessun risultato inventato.`,
+        imported: { competitions: 0, teams: 0, matches: 0, standings: 0 },
+        error: message,
+      };
+    }
+  }
+
+  private async runSync() {
+    let ping: { ok: boolean; provider: string };
+    try {
+      ping = await this.provider.ping();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Provider ${this.provider.slug} non raggiungibile: ${message}`);
+    }
     if (!ping.ok) {
       throw new Error(`Provider ${this.provider.slug} non raggiungibile`);
     }
@@ -32,17 +57,24 @@ export class FootballSyncService {
     let teams = 0;
     let matches = 0;
     let standings = 0;
+    const skipped: string[] = [];
+    const deadline = this.syncDeadline();
 
     for (const competition of competitions) {
+      if (deadline && Date.now() > deadline) {
+        skipped.push(`remaining from ${competition.name} (budget tempo)`);
+        this.logger.warn(`Sync time budget reached, skip remaining from ${competition.name}`);
+        break;
+      }
       try {
         const persisted = await this.upsertCompetition(sport.id, competition);
         teams += await this.upsertTeams(sport.id, competition);
         matches += await this.upsertMatches(sport.id, persisted.competitionId, persisted.seasonId, competition);
-        standings += await this.upsertStandings(persisted.seasonId, competition);
+        standings += await this.safeStandings(sport.id, persisted.seasonId, competition);
       } catch (error) {
-        this.logger.error(
-          `Skip ${competition.name}: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        const message = error instanceof Error ? error.message : String(error);
+        skipped.push(`${competition.name}: ${message}`);
+        this.logger.error(`Skip ${competition.name}: ${message}`);
       }
     }
 
@@ -53,31 +85,52 @@ export class FootballSyncService {
     return {
       provider: this.provider.slug,
       source: this.provider.slug,
-      note: 'Solo dati restituiti dal provider. Nessun risultato inventato.',
+      note: skipped.length
+        ? `Solo dati restituiti dal provider. Nessun risultato inventato. Skip: ${skipped.length}.`
+        : 'Solo dati restituiti dal provider. Nessun risultato inventato.',
       imported: {
         competitions: competitions.length,
         teams,
         matches,
         standings,
       },
+      skipped: skipped.length ? skipped : undefined,
     };
   }
 
+  private syncDeadline(): number | null {
+    const configured = Number(process.env.FOOTBALL_SYNC_BUDGET_MS);
+    if (Number.isFinite(configured) && configured > 0) return Date.now() + configured;
+    if (process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_ENVIRONMENT_NAME) {
+      return Date.now() + 22_000;
+    }
+    return null;
+  }
+
   private async backfillCountries() {
-    const rows = await this.prisma.competition.findMany({
-      where: { sport: { slug: 'football' } },
-      select: { id: true, name: true, country: true, externalId: true },
-    });
-    for (const row of rows) {
-      const country = inferFootballCountry(row.name, row.country, row.externalId);
-      if (!country || country === row.country) continue;
-      await this.prisma.competition.update({ where: { id: row.id }, data: { country } });
-      await this.prisma.league.updateMany({ where: { competitionId: row.id }, data: { country } });
+    try {
+      const rows = await this.prisma.competition.findMany({
+        where: { sport: { slug: 'football' } },
+        select: { id: true, name: true, country: true, externalId: true },
+      });
+      for (const row of rows) {
+        const country = inferFootballCountry(row.name, row.country, row.externalId);
+        if (!country || country === row.country) continue;
+        await this.prisma.competition.update({ where: { id: row.id }, data: { country } });
+        await this.prisma.league.updateMany({ where: { competitionId: row.id }, data: { country } });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Country backfill skipped: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   private async upsertCompetition(sportId: string, incoming: ExternalCompetition) {
-    const country = inferFootballCountry(incoming.name, incoming.country, incoming.externalId) ?? incoming.country;
+    const country =
+      inferFootballCountry(incoming.name, incoming.country, incoming.externalId) ??
+      incoming.country ??
+      'Europe';
     const competition = await this.prisma.competition.upsert({
       where: { sportId_name: { sportId, name: incoming.name } },
       update: { country, type: incoming.type ?? 'LEAGUE', externalId: incoming.externalId, isActive: true },
@@ -247,40 +300,22 @@ export class FootballSyncService {
     return team.id;
   }
 
-  private async upsertStandings(seasonId: string, competition: ExternalCompetition) {
+  private async safeStandings(sportId: string, seasonId: string, competition: ExternalCompetition) {
+    try {
+      return await this.upsertStandings(sportId, seasonId, competition);
+    } catch (error) {
+      this.logger.error(
+        `Standings ${competition.name}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return 0;
+    }
+  }
+
+  private async upsertStandings(sportId: string, seasonId: string, competition: ExternalCompetition) {
     if (!this.provider.fetchStandings) {
       return 0;
     }
     const rows = await this.provider.fetchStandings(competition);
-    for (const row of rows) {
-      const team = await this.prisma.team.findUnique({ where: { externalId: row.teamExternalId } });
-      if (!team) continue;
-      await this.prisma.standing.upsert({
-        where: { seasonId_teamId: { seasonId, teamId: team.id } },
-        update: {
-          position: row.position,
-          played: row.played,
-          won: row.won,
-          drawn: row.drawn,
-          lost: row.lost,
-          goalsFor: row.goalsFor,
-          goalsAgainst: row.goalsAgainst,
-          points: row.points,
-        },
-        create: {
-          seasonId,
-          teamId: team.id,
-          position: row.position,
-          played: row.played,
-          won: row.won,
-          drawn: row.drawn,
-          lost: row.lost,
-          goalsFor: row.goalsFor,
-          goalsAgainst: row.goalsAgainst,
-          points: row.points,
-        },
-      });
-    }
-    return rows.length;
+    return persistOfficialStandings(this.prisma, { sportId, seasonId, rows });
   }
 }

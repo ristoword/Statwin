@@ -73,8 +73,14 @@ export class OpenLigaDbProvider implements FootballDataProvider {
   }
 
   async ping() {
-    const res = await fetch(`${this.baseUrl}/getavailableleagues`);
-    return { ok: res.ok, provider: this.slug };
+    try {
+      const res = await fetch(`${this.baseUrl}/getavailableleagues`, {
+        signal: AbortSignal.timeout(8_000),
+      });
+      return { ok: res.ok, provider: this.slug };
+    } catch {
+      return { ok: false, provider: this.slug };
+    }
   }
 
   async fetchCompetitions(): Promise<ExternalCompetition[]> {
@@ -178,9 +184,16 @@ export class OpenLigaDbProvider implements FootballDataProvider {
   }
 
   private async getJson<T>(path: string): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      headers: { Accept: 'application/json' },
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${this.baseUrl}${path}`, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`OpenLigaDB ${path} timeout/network: ${message}`);
+    }
     if (!res.ok) {
       throw new Error(`OpenLigaDB ${path} failed: ${res.status}`);
     }

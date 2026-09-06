@@ -43,6 +43,7 @@ export type ExternalMatchEvent = {
 
 export type ExternalStanding = {
   teamExternalId: string;
+  teamName?: string;
   position: number;
   played: number;
   won: number;
