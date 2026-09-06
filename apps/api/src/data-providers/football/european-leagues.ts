@@ -123,3 +123,22 @@ export function prioritizeFootballCompetitions<T extends NamedCompetition>(items
     return a.name.localeCompare(b.name, 'en');
   });
 }
+
+export function parseLeagueFilter(value?: string | string[] | null): string[] {
+  const parts = Array.isArray(value) ? value : [value ?? ''];
+  return parts
+    .flatMap((item) => item.split(','))
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function selectFootballCompetitions<T extends NamedCompetition>(items: T[], only?: string[]): T[] {
+  const ranked = prioritizeFootballCompetitions(items);
+  if (!only?.length) return ranked;
+  const wanted = new Set(only.map((item) => item.trim().toLowerCase()).filter(Boolean));
+  return ranked.filter((item) => {
+    const id = footballCompetitionId(item).toLowerCase();
+    const name = item.name.toLowerCase();
+    return wanted.has(id) || wanted.has(name) || (wanted.has('serie a') && footballSyncPriority(item) === 0);
+  });
+}

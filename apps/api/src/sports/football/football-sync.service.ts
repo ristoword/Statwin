@@ -4,7 +4,11 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 import { FOOTBALL_DATA_PROVIDER } from '../../data-providers/data-providers.module';
 import { FootballDataProvider } from '../../data-providers/interfaces/sports-data-provider';
 import { ExternalCompetition } from '../../data-providers/interfaces/external-football';
-import { inferFootballCountry, prioritizeFootballCompetitions } from '../../data-providers/football/european-leagues';
+import {
+  inferFootballCountry,
+  parseLeagueFilter,
+  selectFootballCompetitions,
+} from '../../data-providers/football/european-leagues';
 import { persistOfficialStandings } from '../generic/standings';
 
 @Injectable()
@@ -16,9 +20,9 @@ export class FootballSyncService {
     @Inject(FOOTBALL_DATA_PROVIDER) private readonly provider: FootballDataProvider,
   ) {}
 
-  async syncAll() {
+  async syncAll(only?: string[]) {
     try {
-      return await this.runSync();
+      return await this.runSync(only);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Football sync failed: ${message}`);
@@ -34,7 +38,7 @@ export class FootballSyncService {
     }
   }
 
-  private async runSync() {
+  private async runSync(only?: string[]) {
     let ping: { ok: boolean; provider: string };
     try {
       ping = await this.provider.ping();
@@ -52,7 +56,10 @@ export class FootballSyncService {
       create: { slug: 'football', name: 'Calcio', isActive: true },
     });
 
-    const competitions = prioritizeFootballCompetitions(await this.provider.fetchCompetitions());
+    const competitions = selectFootballCompetitions(
+      await this.provider.fetchCompetitions(),
+      parseLeagueFilter(only),
+    );
     await this.backfillCountries();
     let teams = 0;
     let matches = 0;
