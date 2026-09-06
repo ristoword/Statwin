@@ -10,6 +10,7 @@ import {
 } from '../interfaces/external-football';
 import { findWiredSport, type WiredSportSpec } from './wired-sports';
 import {
+  collectTsdLeagueEvents,
   lookupTsdTable,
   mapTsdTableRow,
   num,
@@ -97,11 +98,9 @@ export class TheSportsDbSportProvider implements FootballDataProvider {
       return teams.map((team) => this.mapTeam(team, competition.country));
     }
 
-    const eventsPayload = await this.client.getJson<{ events?: TsdEvent[] }>(
-      `/eventsseason.php?id=${competition.shortcut}&s=${encodeURIComponent(competition.seasonName)}`,
-    );
+    const events = await this.leagueEvents(competition);
     const unique = new Map<string, ExternalTeam>();
-    for (const event of eventsPayload.events ?? []) {
+    for (const event of events) {
       this.collectEventTeam(unique, event.idHomeTeam, event.strHomeTeam, competition);
       this.collectEventTeam(unique, event.idAwayTeam, event.strAwayTeam, competition);
       if (!event.strHomeTeam && !event.strAwayTeam && event.strEvent) {
@@ -117,12 +116,17 @@ export class TheSportsDbSportProvider implements FootballDataProvider {
   }
 
   async fetchMatches(competition: ExternalCompetition): Promise<ExternalMatch[]> {
-    const payload = await this.client.getJson<{ events?: TsdEvent[] }>(
-      `/eventsseason.php?id=${competition.shortcut}&s=${encodeURIComponent(competition.seasonName)}`,
+    const events = await this.leagueEvents(competition);
+    return events.map((event) => this.mapMatch(event, competition)).filter((match): match is ExternalMatch => Boolean(match));
+  }
+
+  private async leagueEvents(competition: ExternalCompetition) {
+    const league = await this.leagueInfo(competition.shortcut);
+    return collectTsdLeagueEvents(
+      (path) => this.client.getJson(path),
+      competition.shortcut,
+      tsdSeasonCandidates(competition.seasonName, this.configuredSeason, league?.strCurrentSeason),
     );
-    return (payload.events ?? [])
-      .map((event) => this.mapMatch(event, competition))
-      .filter((match): match is ExternalMatch => Boolean(match));
   }
 
   async fetchStandings(competition: ExternalCompetition): Promise<ExternalStanding[]> {

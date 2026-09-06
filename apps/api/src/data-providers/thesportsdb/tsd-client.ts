@@ -186,3 +186,48 @@ export async function lookupTsdTable(
   }
   return [];
 }
+
+export type TsdGetJson = <T>(path: string) => Promise<T>;
+
+function addTsdEvents(target: Map<string, TsdEvent>, events?: TsdEvent[] | null) {
+  for (const event of events ?? []) {
+    if (event?.idEvent) target.set(event.idEvent, event);
+  }
+}
+
+/**
+ * Season archive (first non-empty candidate) plus upcoming league fixtures.
+ * Never invents events: empty provider responses stay empty.
+ */
+export async function collectTsdLeagueEvents(
+  getJson: TsdGetJson,
+  leagueId: string,
+  seasons: string[],
+): Promise<TsdEvent[]> {
+  const byId = new Map<string, TsdEvent>();
+
+  for (const season of seasons) {
+    try {
+      const payload = await getJson<{ events?: TsdEvent[] | null }>(
+        `/eventsseason.php?id=${encodeURIComponent(leagueId)}&s=${encodeURIComponent(season)}`,
+      );
+      const events = payload.events ?? [];
+      if (!events.length) continue;
+      addTsdEvents(byId, events);
+      break;
+    } catch {
+      /* try the next season label */
+    }
+  }
+
+  try {
+    const upcoming = await getJson<{ events?: TsdEvent[] | null }>(
+      `/eventsnextleague.php?id=${encodeURIComponent(leagueId)}`,
+    );
+    addTsdEvents(byId, upcoming.events);
+  } catch {
+    /* keep season events only */
+  }
+
+  return [...byId.values()];
+}

@@ -9,6 +9,7 @@ import {
   ExternalTeam,
 } from '../interfaces/external-football';
 import { DEFAULT_TSD_LEAGUES, EUROPEAN_TSD_LEAGUES, inferFootballCountry, mergeLeagueIds } from './european-leagues';
+import { collectTsdLeagueEvents, tsdSeasonCandidates } from '../thesportsdb/tsd-client';
 
 type TsdTeam = {
   idTeam: string;
@@ -112,11 +113,9 @@ export class TheSportsDbProvider implements FootballDataProvider {
       return teams.map((team) => this.mapTeam(team));
     }
 
-    const eventsPayload = await this.getJson<{ events?: TsdEvent[] }>(
-      `/eventsseason.php?id=${competition.shortcut}&s=${encodeURIComponent(this.season)}`,
-    );
+    const events = await this.leagueEvents(competition);
     const unique = new Map<string, ExternalTeam>();
-    for (const event of eventsPayload.events ?? []) {
+    for (const event of events) {
       if (event.idHomeTeam && event.strHomeTeam) {
         unique.set(`tsd:team:${event.idHomeTeam}`, {
           externalId: `tsd:team:${event.idHomeTeam}`,
@@ -136,10 +135,16 @@ export class TheSportsDbProvider implements FootballDataProvider {
   }
 
   async fetchMatches(competition: ExternalCompetition): Promise<ExternalMatch[]> {
-    const payload = await this.getJson<{ events?: TsdEvent[] }>(
-      `/eventsseason.php?id=${competition.shortcut}&s=${encodeURIComponent(this.season)}`,
+    const events = await this.leagueEvents(competition);
+    return events.map((event) => this.mapMatch(event, competition));
+  }
+
+  private leagueEvents(competition: ExternalCompetition) {
+    return collectTsdLeagueEvents(
+      (path) => this.getJson(path),
+      competition.shortcut,
+      tsdSeasonCandidates(this.season, competition.seasonName),
     );
-    return (payload.events ?? []).map((event) => this.mapMatch(event, competition));
   }
 
   async fetchStandings(competition: ExternalCompetition): Promise<ExternalStanding[]> {
