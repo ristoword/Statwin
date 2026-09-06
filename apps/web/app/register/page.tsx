@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { BrandMark } from '../../components/brand-mark';
 import { apiPost } from '../../lib/api';
 import { saveTokens } from '../../lib/auth-storage';
 
@@ -38,6 +39,7 @@ export default function RegisterPage() {
   return (
     <div className="auth-shell">
       <div className="auth-story">
+        <BrandMark size={72} />
         <p className="kicker">Onboarding</p>
         <h1>Un posto nel desk.</h1>
         <p>

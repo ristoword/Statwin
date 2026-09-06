@@ -20,6 +20,10 @@ const serif = Instrument_Serif({
 export const metadata: Metadata = {
   title: 'STATWIN — Sports Analytics AI',
   description: 'Piattaforma enterprise di analisi statistica sportiva. Le probabilità sono stime, non certezze.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

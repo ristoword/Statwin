@@ -85,7 +85,9 @@ button, input, select, textarea { font: inherit; }
 .brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .brand-mark {
   flex-shrink: 0;
-  filter: drop-shadow(0 8px 16px rgba(184, 146, 42, 0.35));
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(232, 200, 114, 0.28), 0 8px 18px rgba(184, 146, 42, 0.28);
 }
 .brand-name {
   font-family: var(--font-serif), "Instrument Serif", Georgia, serif;
@@ -159,6 +161,10 @@ p { line-height: 1.7; color: #d6cec1; }
 .hero {
   position: relative;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: center;
   border: 1px solid var(--line);
   border-radius: 32px;
   padding: clamp(36px, 6vw, 72px);
@@ -178,6 +184,14 @@ p { line-height: 1.7; color: #d6cec1; }
 }
 .hero > * { position: relative; }
 .hero p { max-width: 660px; font-size: 18px; }
+.hero-emblem {
+  width: min(240px, 34vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(232, 200, 114, 0.28), 0 20px 60px rgba(232, 200, 114, 0.18);
+}
+.hero-emblem img { width: 100%; height: 100%; object-fit: cover; }
 .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
 .hero-meta {
   display: flex;
@@ -398,6 +412,7 @@ label input { width: auto; margin: 0; }
   align-items: stretch;
   margin: 12px 0;
 }
+.auth-story .brand-mark { margin-bottom: 18px; }
 .auth-story {
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -527,6 +542,8 @@ label input { width: auto; margin: 0; }
   .header-inner { flex-wrap: wrap; padding: 12px 0; }
 }
 @media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-emblem { margin: 0 auto; width: min(180px, 56vw); }
   .match { grid-template-columns: 1fr; text-align: left; }
   .match-team.right { text-align: left; }
   .footer-inner, .auth-shell { grid-template-columns: 1fr; }

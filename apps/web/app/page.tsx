@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { apiV1, apiGet } from '../lib/api';
 import { asAgenda } from '../lib/agenda';
@@ -39,36 +40,41 @@ export default async function Home() {
   return (
     <>
       <section className="hero">
-        <p className="kicker">Sports intelligence platform</p>
-        <h1>
-          La lettura dei dati,
-          <br />
-          non la promessa del risultato.
-        </h1>
-        <p>
-          STATWIN è un terminal di analisi sportiva. Separa in modo visivo e tecnico DATI,
-          STATISTICHE, PROBABILITÀ e ANALISI AI. Il primo sport attivo è il calcio italiano.
-        </p>
-        <div className="hero-actions">
-          <Link className="btn" href="/football">
-            Entra nel calcio
-          </Link>
-          <Link className="btn-ghost" href="/subscriptions">
-            Vedi i piani
-          </Link>
+        <div className="hero-copy">
+          <p className="kicker">Sports intelligence platform</p>
+          <h1>
+            La lettura dei dati,
+            <br />
+            non la promessa del risultato.
+          </h1>
+          <p>
+            STATWIN è un terminal di analisi sportiva. Separa in modo visivo e tecnico DATI,
+            STATISTICHE, PROBABILITÀ e ANALISI AI. Il primo sport attivo è il calcio italiano.
+          </p>
+          <div className="hero-actions">
+            <Link className="btn" href="/football">
+              Entra nel calcio
+            </Link>
+            <Link className="btn-ghost" href="/subscriptions">
+              Vedi i piani
+            </Link>
+          </div>
+          <div className="hero-meta">
+            <span className={`pulse${live ? '' : ' off'}`}>
+              <i />
+              Sistema {live ? 'operativo' : health.status ?? 'offline'}
+            </span>
+            <span>
+              <b>{football.counts?.competitions ?? 0}</b> campionati
+            </span>
+            <span>
+              <b>{football.counts?.matches ?? 0}</b> partite in archivio
+            </span>
+            <span>18+ · nessuna vincita promessa</span>
+          </div>
         </div>
-        <div className="hero-meta">
-          <span className={`pulse${live ? '' : ' off'}`}>
-            <i />
-            Sistema {live ? 'operativo' : health.status ?? 'offline'}
-          </span>
-          <span>
-            <b>{football.counts?.competitions ?? 0}</b> campionati
-          </span>
-          <span>
-            <b>{football.counts?.matches ?? 0}</b> partite in archivio
-          </span>
-          <span>18+ · nessuna vincita promessa</span>
+        <div className="hero-emblem">
+          <Image src="/logo.png" alt="STATWIN — intelligenza artificiale e analisi" width={280} height={280} priority />
         </div>
       </section>
 

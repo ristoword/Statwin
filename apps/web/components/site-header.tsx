@@ -22,7 +22,7 @@ export function SiteHeader() {
     <header className="site-header">
       <div className="header-inner">
         <Link href="/" className="brand" onClick={() => setOpen(false)}>
-          <BrandMark id="sw-header" />
+          <BrandMark id="sw-header" priority />
           <span className="brand-name">
             STAT<span>WIN</span>
           </span>

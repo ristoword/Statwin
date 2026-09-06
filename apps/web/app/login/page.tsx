@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { BrandMark } from '../../components/brand-mark';
 import { apiPost } from '../../lib/api';
 import { saveTokens } from '../../lib/auth-storage';
 
@@ -35,6 +36,7 @@ export default function LoginPage() {
   return (
     <div className="auth-shell">
       <div className="auth-story">
+        <BrandMark size={72} />
         <p className="kicker">Members desk</p>
         <h1>Bentornato.</h1>
         <p>Il terminal STATWIN è riservato. Analisi statistica, quattro livelli, nessuna promessa di vincita.</p>

@@ -35,9 +35,19 @@ nav a {
   padding: 6px 10px;
   border-radius: 999px;
 }
+nav a.admin-brand,
 nav a:first-child {
   color: var(--gold);
   letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+nav a.admin-brand img {
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
   font-weight: 800;
 }
 nav a:hover { color: var(--text); background: rgba(255,255,255,0.05); }

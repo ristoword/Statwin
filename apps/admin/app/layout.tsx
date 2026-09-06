@@ -9,7 +9,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <html lang="it">
       <body>
         <nav>
-          <Link href="/">STATWIN Admin</Link>
+          <Link href="/" className="admin-brand">
+            <img src="/logo.png" alt="" width={28} height={28} />
+            STATWIN Admin
+          </Link>
           <Link href="/">Overview</Link>
           <Link href="/users">Utenti</Link>
           <Link href="/subscriptions">Abbonamenti</Link>
