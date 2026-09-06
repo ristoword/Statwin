@@ -1,0 +1,570 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================
+// AUTH & USERS
+// ========================
+
+enum Role {
+  USER
+  PREMIUM_USER
+  ADMIN
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  passwordHash          String
+  firstName             String?
+  lastName              String?
+  role                  Role      @default(USER)
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  emailVerifyToken      String?
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  dateOfBirth           DateTime?
+  acceptedTermsAt       DateTime?
+  acceptedDisclaimerAt  DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  refreshTokens  RefreshToken[]
+  subscription   Subscription?
+  payments       Payment[]
+  notifications  Notification[]
+  predictions    Prediction[]
+  aiReports      AIReport[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ========================
+// SUBSCRIPTIONS & PAYMENTS
+// ========================
+
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan             SubscriptionPlan   @default(FREE)
+  status           SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId String?
+  stripeSubId      String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([plan, status])
+  @@map("subscriptions")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountCents     Int
+  currency        String        @default("eur")
+  status          PaymentStatus @default(PENDING)
+  plan            SubscriptionPlan
+  stripePaymentId String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
+
+// ========================
+// SPORTS CORE
+// ========================
+
+model Sport {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  competitions Competition[]
+  teams        Team[]
+  matches      Match[]
+
+  @@map("sports")
+}
+
+model Competition {
+  id         String   @id @default(cuid())
+  sportId    String
+  sport      Sport    @relation(fields: [sportId], references: [id])
+  name       String
+  country    String?
+  type       String   @default("LEAGUE")
+  externalId String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  leagues League[]
+  seasons Season[]
+  matches Match[]
+
+  @@unique([sportId, name])
+  @@index([sportId])
+  @@map("competitions")
+}
+
+model League {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id])
+  name          String
+  country       String?
+  logo          String?
+  externalId    String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([competitionId])
+  @@map("leagues")
+}
+
+model Season {
+  id            String      @id @default(cuid())
+  competitionId String
+  competition   Competition @relation(fields: [competitionId], references: [id])
+  name          String
+  startDate     DateTime?
+  endDate       DateTime?
+  isCurrent     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  matches    Match[]
+  standings  Standing[]
+
+  @@unique([competitionId, name])
+  @@index([competitionId, isCurrent])
+  @@map("seasons")
+}
+
+model Team {
+  id         String   @id @default(cuid())
+  sportId    String
+  sport      Sport    @relation(fields: [sportId], references: [id])
+  name       String
+  shortName  String?
+  logo       String?
+  country    String?
+  venue      String?
+  externalId String?  @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  players     Player[]
+  coaches     Coach[]
+  homeMatches Match[]           @relation("HomeTeam")
+  awayMatches Match[]           @relation("AwayTeam")
+  lineups     Lineup[]
+  injuries    Injury[]
+  suspensions Suspension[]
+  standings   Standing[]
+  statistics  TeamStatistic[]
+  h2hHome     HeadToHead[]      @relation("H2HHome")
+  h2hAway     HeadToHead[]      @relation("H2HAway")
+
+  @@index([sportId, name])
+  @@map("teams")
+}
+
+model Player {
+  id           String    @id @default(cuid())
+  teamId       String?
+  team         Team?     @relation(fields: [teamId], references: [id])
+  name         String
+  position     String?
+  nationality  String?
+  dateOfBirth  DateTime?
+  externalId   String?   @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lineups     Lineup[]
+  injuries    Injury[]
+  suspensions Suspension[]
+  statistics  PlayerStatistic[]
+  events      MatchEvent[]
+
+  @@index([teamId])
+  @@index([name])
+  @@map("players")
+}
+
+model Coach {
+  id          String   @id @default(cuid())
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id])
+  name        String
+  nationality String?
+  externalId  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([teamId])
+  @@map("coaches")
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  HALF_TIME
+  FINISHED
+  POSTPONED
+  CANCELED
+}
+
+model Match {
+  id            String      @id @default(cuid())
+  sportId       String
+  sport         Sport       @relation(fields: [sportId], references: [id])
+  competitionId String?
+  competition   Competition? @relation(fields: [competitionId], references: [id])
+  seasonId      String?
+  season        Season?     @relation(fields: [seasonId], references: [id])
+  homeTeamId    String
+  homeTeam      Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId    String
+  awayTeam      Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  status        MatchStatus @default(SCHEDULED)
+  kickoff       DateTime
+  venue         String?
+  homeScore     Int?
+  awayScore     Int?
+  externalId    String?     @unique
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  events      MatchEvent[]
+  lineups     Lineup[]
+  odds        Odd[]
+  predictions Prediction[]
+  aiReports   AIReport[]
+
+  @@index([sportId, kickoff])
+  @@index([status, kickoff])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@map("matches")
+}
+
+model MatchEvent {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerId  String?
+  player    Player?  @relation(fields: [playerId], references: [id])
+  type      String
+  minute    Int?
+  teamSide  String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([matchId])
+  @@map("match_events")
+}
+
+model Lineup {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id])
+  isStarter Boolean  @default(true)
+  position  String?
+  shirtNumber Int?
+  createdAt DateTime @default(now())
+
+  @@unique([matchId, playerId])
+  @@index([matchId, teamId])
+  @@map("lineups")
+}
+
+model Injury {
+  id          String    @id @default(cuid())
+  teamId      String
+  team        Team      @relation(fields: [teamId], references: [id])
+  playerId    String
+  player      Player    @relation(fields: [playerId], references: [id])
+  type        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([teamId, isActive])
+  @@index([playerId])
+  @@map("injuries")
+}
+
+model Suspension {
+  id          String    @id @default(cuid())
+  teamId      String
+  team        Team      @relation(fields: [teamId], references: [id])
+  playerId    String
+  player      Player    @relation(fields: [playerId], references: [id])
+  reason      String
+  matchesLeft Int       @default(1)
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([teamId, isActive])
+  @@map("suspensions")
+}
+
+model Standing {
+  id        String   @id @default(cuid())
+  seasonId  String
+  season    Season   @relation(fields: [seasonId], references: [id])
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  position  Int
+  played    Int      @default(0)
+  won       Int      @default(0)
+  drawn     Int      @default(0)
+  lost      Int      @default(0)
+  goalsFor  Int      @default(0)
+  goalsAgainst Int   @default(0)
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([seasonId, teamId])
+  @@index([seasonId, position])
+  @@map("standings")
+}
+
+model TeamStatistic {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id])
+  seasonKey String
+  metric    String
+  value     Float
+  context   String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teamId, seasonKey, metric, context])
+  @@index([teamId, metric])
+  @@map("team_statistics")
+}
+
+model PlayerStatistic {
+  id        String   @id @default(cuid())
+  playerId  String
+  player    Player   @relation(fields: [playerId], references: [id])
+  seasonKey String
+  metric    String
+  value     Float
+  context   String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, seasonKey, metric, context])
+  @@index([playerId, metric])
+  @@map("player_statistics")
+}
+
+model HeadToHead {
+  id         String   @id @default(cuid())
+  homeTeamId String
+  homeTeam   Team     @relation("H2HHome", fields: [homeTeamId], references: [id])
+  awayTeamId String
+  awayTeam   Team     @relation("H2HAway", fields: [awayTeamId], references: [id])
+  played     Int      @default(0)
+  homeWins   Int      @default(0)
+  draws      Int      @default(0)
+  awayWins   Int      @default(0)
+  payload    Json?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([homeTeamId, awayTeamId])
+  @@map("head_to_heads")
+}
+
+// ========================
+// ODDS
+// ========================
+
+model OddsProvider {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  odds Odd[]
+
+  @@map("odds_providers")
+}
+
+model Bookmaker {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  odds Odd[]
+
+  @@map("bookmakers")
+}
+
+model Market {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  odds Odd[]
+
+  @@map("markets")
+}
+
+model Odd {
+  id             String       @id @default(cuid())
+  matchId        String
+  match          Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  providerId     String?
+  provider       OddsProvider? @relation(fields: [providerId], references: [id])
+  bookmakerId    String?
+  bookmaker      Bookmaker?   @relation(fields: [bookmakerId], references: [id])
+  marketId       String?
+  market         Market?      @relation(fields: [marketId], references: [id])
+  selection      String
+  price          Float
+  capturedAt     DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+
+  @@index([matchId, capturedAt])
+  @@index([bookmakerId, marketId])
+  @@map("odds")
+}
+
+// ========================
+// PREDICTIONS & AI
+// ========================
+
+model PredictionModel {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  version     String
+  isActive    Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+
+  predictions Prediction[]
+
+  @@map("prediction_models")
+}
+
+model Prediction {
+  id          String           @id @default(cuid())
+  matchId     String
+  match       Match            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  modelId     String?
+  model       PredictionModel? @relation(fields: [modelId], references: [id])
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id])
+  market      String
+  selection   String
+  probability Float
+  disclaimer  String           @default("Stima statistica, non una certezza.")
+  features    Json?
+  createdAt   DateTime         @default(now())
+
+  @@index([matchId])
+  @@map("predictions")
+}
+
+model AIReport {
+  id        String   @id @default(cuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  type      String
+  content   Json
+  sources   Json?
+  createdAt DateTime @default(now())
+
+  @@index([matchId])
+  @@map("ai_reports")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@map("notifications")
+}
